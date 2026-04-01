@@ -18,6 +18,9 @@ Thumbs.db
 # PSD source files
 *.psd
 
+# Temp files
+_tmp/
+
 # OS files
 Desktop.ini
 ehthumbs.db
