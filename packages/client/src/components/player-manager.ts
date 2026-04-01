@@ -126,14 +126,20 @@ export class PlayerManager extends LitElement {
     await this.runCommand(`whitelist add ${name}`);
     this.newWhitelistName = '';
 
-    // Reload list from file (server updates it)
-    setTimeout(() => this.loadData(), 1000);
+    setTimeout(() => {
+      this.loadData();
+      this.dispatchEvent(new CustomEvent('whitelist-changed', { bubbles: true, composed: true }));
+    }, 1000);
     showToast(`${name} added to whitelist`, 'success');
   }
 
   private async removeFromWhitelist(name: string) {
     await this.runCommand(`whitelist remove ${name}`);
-    setTimeout(() => this.loadData(), 1000);
+    setTimeout(() => {
+      this.loadData();
+      // Notify parent to refresh whitelist cache (for "+ Whitelist" button in history)
+      this.dispatchEvent(new CustomEvent('whitelist-changed', { bubbles: true, composed: true }));
+    }, 1000);
     showToast(`${name} removed from whitelist`, 'success');
   }
 

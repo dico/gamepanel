@@ -132,6 +132,7 @@ export class PlayerList extends LitElement {
     super.connectedCallback();
     this.loadHistory();
     this.loadWhitelist();
+    this.addEventListener('whitelist-changed', () => this.loadWhitelist());
 
     this.cleanupWs = onWsEvent((event) => {
       if (event.type === 'server:players' && event.serverId === this.serverId) {
