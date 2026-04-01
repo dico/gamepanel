@@ -2,8 +2,7 @@
 set -euo pipefail
 
 # =============================================
-# GamePanel Setup Script
-# Installs GamePanel on a fresh Ubuntu/Debian server
+# GamePanel — Install, Update, Uninstall
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/dico/gamepanel/main/setup.sh | sudo bash
@@ -12,6 +11,7 @@ set -euo pipefail
 DOCKER_IMAGE="fosenutvikling/gamepanel:latest"
 GAMEPANEL_DIR="/opt/gamepanel"
 COMPOSE_FILE="$GAMEPANEL_DIR/docker-compose.yml"
+GITHUB_REPO="dico/gamepanel"
 
 # Colors
 RED='\033[0;31m'
@@ -24,7 +24,6 @@ log()  { echo -e "${GREEN}[GamePanel]${NC} $1"; }
 warn() { echo -e "${YELLOW}[Warning]${NC} $1"; }
 err()  { echo -e "${RED}[Error]${NC} $1"; exit 1; }
 
-# Read from terminal even when piped via curl | bash
 prompt() {
   local var="$1" msg="$2" default="${3:-}"
   read -p "$msg" "$var" </dev/tty
@@ -46,6 +45,10 @@ prompt_secret() {
 install_docker() {
   if command -v docker &>/dev/null; then
     log "Docker already installed: $(docker --version)"
+    # Add current sudo user to docker group if not already
+    if [[ -n "${SUDO_USER:-}" ]]; then
+      usermod -aG docker "$SUDO_USER" 2>/dev/null || true
+    fi
     return
   fi
 
@@ -68,104 +71,61 @@ install_docker() {
   apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   systemctl enable docker
   systemctl start docker
+
+  # Add current sudo user to docker group
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    usermod -aG docker "$SUDO_USER"
+    log "Added $SUDO_USER to docker group (re-login for effect)"
+  fi
+
   log "Docker installed: $(docker --version)"
 }
 
 # =============================================
-# Pre-flight checks
+# Actions
 # =============================================
 
-if [[ $EUID -ne 0 ]]; then
-  err "This script must be run as root (use sudo)"
-fi
-
-if [[ ! -f /etc/os-release ]]; then
-  err "Cannot detect OS. This script supports Ubuntu/Debian."
-fi
-
-source /etc/os-release
-if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
-  warn "Detected $ID — this script is designed for Ubuntu/Debian. Continuing anyway..."
-fi
-
-echo ""
-echo -e "${BLUE}╔═══════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║          GamePanel Setup               ║${NC}"
-echo -e "${BLUE}╚═══════════════════════════════════════╝${NC}"
-echo ""
-
-# =============================================
-# Choose mode
-# =============================================
-
-echo -e "Select installation mode:"
-echo -e "  ${GREEN}1)${NC} Full install (panel + local node)"
-echo -e "  ${GREEN}2)${NC} Node only (add to existing panel)"
-echo ""
-prompt MODE "Choice [1]: " "1"
-
-if [[ "$MODE" == "2" ]]; then
-  log "Node-only setup"
+do_install() {
+  log "Starting full installation..."
   install_docker
+
+  SERVER_IP=$(hostname -I | awk '{print $1}')
+
   echo ""
-  log "Docker installed. Add this node in your GamePanel UI:"
-  echo -e "  Host: ${BLUE}tcp://$(hostname -I | awk '{print $1}'):2376${NC}"
-  echo ""
-  warn "For remote access, configure Docker TLS. See docs."
-  exit 0
-fi
+  echo -e "${BLUE}Configure admin account:${NC}"
+  prompt ADMIN_USER "  Admin username [admin]: " "admin"
 
-# =============================================
-# Full installation
-# =============================================
+  while true; do
+    prompt_secret ADMIN_PASS "  Admin password (min 8 characters): "
+    if [[ ${#ADMIN_PASS} -ge 8 ]]; then break; fi
+    warn "Password must be at least 8 characters"
+  done
 
-log "Starting full installation..."
-install_docker
+  prompt PANEL_PORT "  Panel port [3000]: " "3000"
 
-# --- Get server IP ---
-SERVER_IP=$(hostname -I | awk '{print $1}')
+  log "Setting up directories..."
+  mkdir -p "$GAMEPANEL_DIR/data/servers"
+  mkdir -p "$GAMEPANEL_DIR/data/backups"
+  mkdir -p "$GAMEPANEL_DIR/templates"
 
-# --- Admin credentials ---
-echo ""
-echo -e "${BLUE}Configure admin account:${NC}"
-prompt ADMIN_USER "  Admin username [admin]: " "admin"
+  log "Downloading game templates..."
+  for file in minecraft-java.json cs2.json; do
+    curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPO/main/templates/$file" \
+      -o "$GAMEPANEL_DIR/templates/$file" 2>/dev/null || warn "Failed to download $file"
+  done
 
-while true; do
-  prompt_secret ADMIN_PASS "  Admin password (min 8 characters): "
-  if [[ ${#ADMIN_PASS} -ge 8 ]]; then
-    break
-  fi
-  warn "Password must be at least 8 characters"
-done
+  mkdir -p "$GAMEPANEL_DIR/templates/images" "$GAMEPANEL_DIR/templates/icons"
+  for file in minecraft-java.jpg cs2.jpg; do
+    curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPO/main/templates/images/$file" \
+      -o "$GAMEPANEL_DIR/templates/images/$file" 2>/dev/null || true
+  done
+  for file in minecraft.svg cs2.png; do
+    curl -fsSL "https://raw.githubusercontent.com/$GITHUB_REPO/main/templates/icons/$file" \
+      -o "$GAMEPANEL_DIR/templates/icons/$file" 2>/dev/null || true
+  done
 
-prompt PANEL_PORT "  Panel port [3000]: " "3000"
-
-# --- Create directories ---
-log "Setting up directories..."
-mkdir -p "$GAMEPANEL_DIR/data/servers"
-mkdir -p "$GAMEPANEL_DIR/data/backups"
-mkdir -p "$GAMEPANEL_DIR/templates"
-
-# --- Download templates from GitHub ---
-log "Downloading game templates..."
-for file in minecraft-java.json cs2.json; do
-  curl -fsSL "https://raw.githubusercontent.com/dico/gamepanel/main/templates/$file" \
-    -o "$GAMEPANEL_DIR/templates/$file" 2>/dev/null || warn "Failed to download $file"
-done
-
-mkdir -p "$GAMEPANEL_DIR/templates/images" "$GAMEPANEL_DIR/templates/icons"
-for file in minecraft-java.jpg cs2.jpg; do
-  curl -fsSL "https://raw.githubusercontent.com/dico/gamepanel/main/templates/images/$file" \
-    -o "$GAMEPANEL_DIR/templates/images/$file" 2>/dev/null || true
-done
-for file in minecraft.svg cs2.png; do
-  curl -fsSL "https://raw.githubusercontent.com/dico/gamepanel/main/templates/icons/$file" \
-    -o "$GAMEPANEL_DIR/templates/icons/$file" 2>/dev/null || true
-done
-
-# --- Create docker-compose.yml ---
-log "Creating Docker Compose configuration..."
-cat > "$COMPOSE_FILE" <<YAML
+  log "Creating Docker Compose configuration..."
+  cat > "$COMPOSE_FILE" <<YAML
 services:
   gamepanel:
     image: ${DOCKER_IMAGE}
@@ -188,32 +148,174 @@ services:
       QUERY_HOST: "${SERVER_IP}"
 YAML
 
-# --- Pull and start ---
-log "Pulling GamePanel image..."
-docker pull "$DOCKER_IMAGE"
+  log "Pulling GamePanel image..."
+  docker pull "$DOCKER_IMAGE"
 
-log "Starting GamePanel..."
-cd "$GAMEPANEL_DIR"
-docker compose up -d
+  log "Starting GamePanel..."
+  cd "$GAMEPANEL_DIR"
+  docker compose up -d
 
-log "Waiting for service to start..."
-sleep 5
+  log "Waiting for service to start..."
+  sleep 5
 
-if docker ps --format '{{.Names}}' | grep -q gamepanel; then
+  if docker ps --format '{{.Names}}' | grep -q gamepanel; then
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════${NC}"
+    echo -e "${GREEN}  GamePanel installed successfully!${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════${NC}"
+    echo ""
+    echo -e "  URL:       ${BLUE}http://${SERVER_IP}:${PANEL_PORT}${NC}"
+    echo -e "  Username:  ${BLUE}${ADMIN_USER}${NC}"
+    echo ""
+    echo -e "  Manage:    ${YELLOW}curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPO/main/setup.sh | sudo bash${NC}"
+    echo ""
+  else
+    err "Container failed to start. Check: docker logs gamepanel"
+  fi
+}
+
+do_update() {
+  log "Updating GamePanel..."
+  cd "$GAMEPANEL_DIR"
+  docker compose pull
+  docker compose up -d
+  sleep 3
+  if docker ps --format '{{.Names}}' | grep -q gamepanel; then
+    log "Update complete! GamePanel is running."
+    docker logs gamepanel --tail 3 2>&1 | grep -i "running\|listening" || true
+  else
+    err "Container failed to start after update. Check: docker logs gamepanel"
+  fi
+}
+
+do_node_install() {
+  log "Node-only setup"
+  install_docker
   echo ""
-  echo -e "${GREEN}═══════════════════════════════════════${NC}"
-  echo -e "${GREEN}  GamePanel installed successfully!${NC}"
-  echo -e "${GREEN}═══════════════════════════════════════${NC}"
+  log "Docker installed. Add this node in your GamePanel UI:"
+  echo -e "  Host: ${BLUE}tcp://$(hostname -I | awk '{print $1}'):2376${NC}"
   echo ""
-  echo -e "  URL:       ${BLUE}http://${SERVER_IP}:${PANEL_PORT}${NC}"
-  echo -e "  Username:  ${BLUE}${ADMIN_USER}${NC}"
+  warn "For remote access, configure Docker TLS. See docs."
+}
+
+do_uninstall() {
   echo ""
-  echo -e "  Directory: ${YELLOW}${GAMEPANEL_DIR}${NC}"
-  echo -e "  Logs:      ${YELLOW}docker logs -f gamepanel${NC}"
-  echo -e "  Stop:      ${YELLOW}cd ${GAMEPANEL_DIR} && docker compose down${NC}"
-  echo -e "  Update:    ${YELLOW}cd ${GAMEPANEL_DIR} && docker compose pull && docker compose up -d${NC}"
+  warn "This will stop the GamePanel container."
+  prompt CONFIRM "Continue? [y/N]: " "n"
+  [[ "$CONFIRM" =~ ^[Yy]$ ]] || exit 0
+
+  if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q gamepanel; then
+    log "Stopping and removing container..."
+    cd "$GAMEPANEL_DIR" 2>/dev/null && docker compose down 2>/dev/null || docker rm -f gamepanel 2>/dev/null
+    log "Container removed"
+  else
+    log "No GamePanel container found"
+  fi
+
   echo ""
+  prompt REMOVE_DATA "Remove ALL data (worlds, backups, database)? [y/N]: " "n"
+
+  if [[ "$REMOVE_DATA" =~ ^[Yy]$ ]]; then
+    warn "Deleting $GAMEPANEL_DIR..."
+    rm -rf "$GAMEPANEL_DIR"
+    log "All data removed"
+  else
+    rm -f "$GAMEPANEL_DIR/docker-compose.yml" 2>/dev/null
+    log "Config removed, server data kept at $GAMEPANEL_DIR/data/"
+  fi
+
+  echo ""
+  log "GamePanel uninstalled"
+}
+
+do_status() {
+  echo ""
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q gamepanel; then
+    echo -e "  Status:  ${GREEN}Running${NC}"
+    local port
+    port=$(docker port gamepanel 3000/tcp 2>/dev/null | head -1 | cut -d: -f2)
+    echo -e "  URL:     ${BLUE}http://$(hostname -I | awk '{print $1}'):${port:-3000}${NC}"
+    echo -e "  Uptime:  $(docker ps --format '{{.Status}}' --filter name=gamepanel)"
+    echo ""
+    echo -e "  Logs:    ${YELLOW}docker logs -f gamepanel${NC}"
+  else
+    echo -e "  Status:  ${RED}Not running${NC}"
+    if [[ -f "$COMPOSE_FILE" ]]; then
+      echo -e "  Start:   ${YELLOW}cd $GAMEPANEL_DIR && sudo docker compose up -d${NC}"
+    fi
+  fi
+  echo ""
+}
+
+# =============================================
+# Pre-flight
+# =============================================
+
+if [[ $EUID -ne 0 ]]; then
+  err "This script must be run as root (use sudo)"
+fi
+
+if [[ ! -f /etc/os-release ]]; then
+  err "Cannot detect OS. This script supports Ubuntu/Debian."
+fi
+
+source /etc/os-release
+if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
+  warn "Detected $ID — this script is designed for Ubuntu/Debian. Continuing anyway..."
+fi
+
+echo ""
+echo -e "${BLUE}╔═══════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║          GamePanel                     ║${NC}"
+echo -e "${BLUE}╚═══════════════════════════════════════╝${NC}"
+echo ""
+
+# =============================================
+# Detect existing installation
+# =============================================
+
+INSTALLED=false
+RUNNING=false
+
+if [[ -f "$COMPOSE_FILE" ]]; then
+  INSTALLED=true
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q gamepanel; then
+    RUNNING=true
+  fi
+fi
+
+if $INSTALLED; then
+  if $RUNNING; then
+    echo -e "  GamePanel is ${GREEN}installed and running${NC}"
+  else
+    echo -e "  GamePanel is ${YELLOW}installed but not running${NC}"
+  fi
+  echo ""
+  echo -e "  ${GREEN}1)${NC} Update (pull latest image and restart)"
+  echo -e "  ${GREEN}2)${NC} Status"
+  echo -e "  ${GREEN}3)${NC} Uninstall"
+  echo -e "  ${GREEN}4)${NC} Reinstall (fresh install)"
+  echo ""
+  prompt CHOICE "Choice [1]: " "1"
+
+  case "$CHOICE" in
+    1) do_update ;;
+    2) do_status ;;
+    3) do_uninstall ;;
+    4) do_uninstall; do_install ;;
+    *) do_update ;;
+  esac
 else
+  echo -e "  GamePanel is ${YELLOW}not installed${NC}"
   echo ""
-  err "Container failed to start. Check: docker logs gamepanel"
+  echo -e "  ${GREEN}1)${NC} Full install (panel + local node)"
+  echo -e "  ${GREEN}2)${NC} Node only (add to existing panel)"
+  echo ""
+  prompt CHOICE "Choice [1]: " "1"
+
+  case "$CHOICE" in
+    1) do_install ;;
+    2) do_node_install ;;
+    *) do_install ;;
+  esac
 fi
