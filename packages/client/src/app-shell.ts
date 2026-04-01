@@ -12,6 +12,7 @@ import './pages/server-page.js';
 import './pages/profile-page.js';
 import './pages/nodes-page.js';
 import './pages/settings-page.js';
+import './pages/status-page.js';
 import './components/notification-panel.js';
 import './components/toast.js';
 import './components/confirm-dialog.js';
@@ -108,10 +109,13 @@ export class AppShell extends LitElement {
     route('/nodes', () => { this.currentPage = 'nodes'; });
     route('/settings', () => { this.currentPage = 'settings'; });
     route('/profile', () => { this.currentPage = 'profile'; });
+    route('/status/:id', (params) => { this.currentPage = 'status'; this.pageParams = params; });
     route('/login', () => { this.currentPage = 'login'; });
     notFound(() => { this.currentPage = 'dashboard'; });
 
     checkAuth().then((user) => {
+      // Status page doesn't need auth
+      if (this.currentPage === 'status') return;
       if (!user) navigate('/login');
       else { connectEventStream(); resolve(); }
     });
@@ -125,6 +129,7 @@ export class AppShell extends LitElement {
   private renderPage() {
     switch (this.currentPage) {
       case 'login': return html`<login-page style="flex:1;display:flex"></login-page>`;
+      case 'status': return html`<status-page style="flex:1;display:flex" .serverId=${this.pageParams.id}></status-page>`;
       case 'server': return html`<server-page .serverId=${this.pageParams.id}></server-page>`;
       case 'nodes': return html`<nodes-page></nodes-page>`;
       case 'settings': return html`<settings-page></settings-page>`;
@@ -134,7 +139,7 @@ export class AppShell extends LitElement {
   }
 
   render() {
-    if (this.currentPage === 'login') {
+    if (this.currentPage === 'login' || this.currentPage === 'status') {
       return html`<main style="padding:0;flex:1;display:flex">${this.renderPage()}</main>`;
     }
 
