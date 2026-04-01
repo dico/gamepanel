@@ -71,35 +71,27 @@ Valheim, Satisfactory, Terraria, Palworld, Enshrouded, ARK, Rust, Project Zomboi
 
 ## Quick Start
 
-### Prerequisites
-
-- Ubuntu/Debian server (or any Linux with Docker)
-- Node.js 20+
-- Docker
-
-### Install
+### One-liner install (Ubuntu/Debian)
 
 ```bash
-# Clone
-git clone https://github.com/YOUR_ORG/gamepanel.git /opt/gamepanel
-cd /opt/gamepanel
-
-# Install & build
-npm install
-npm run build
-
-# Configure
-cp .env.example .env
-# Edit .env with your admin credentials
-
-# Run
-node packages/server/dist/index.js
+curl -fsSL https://raw.githubusercontent.com/dico/gamepanel/main/setup.sh | sudo bash
 ```
 
-Or use the setup script:
+Installs Docker (if needed), asks for admin credentials, pulls the Docker image, and starts GamePanel.
+
+### Manual install with Docker
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_ORG/gamepanel/main/setup.sh | sudo bash
+docker run -d \
+  --name gamepanel \
+  -p 3000:3000 \
+  -v /opt/gamepanel/data:/app/data \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e ADMIN_USERNAME=admin \
+  -e ADMIN_PASSWORD=yourpassword \
+  -e HOST_DATA_DIR=/opt/gamepanel/data \
+  -e QUERY_HOST=$(hostname -I | awk '{print $1}') \
+  fosenutvikling/gamepanel:latest
 ```
 
 ### Development
