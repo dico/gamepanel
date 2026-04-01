@@ -85,8 +85,8 @@ echo ""
 # =============================================
 
 echo -e "Select installation mode:"
-echo -e "  ${GREEN}1)${NC} Standalone (panel + local node)"
-echo -e "  ${GREEN}2)${NC} Node only (register with existing panel)"
+echo -e "  ${GREEN}1)${NC} Full install (panel + local node)"
+echo -e "  ${GREEN}2)${NC} Node only (add to existing panel)"
 echo ""
 read -p "Choice [1]: " MODE
 MODE=${MODE:-1}
