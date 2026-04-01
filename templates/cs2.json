@@ -45,12 +45,13 @@
 
   "update": {
     "type": "auto",
-    "description": "Serveren oppdateres automatisk ved restart via SteamCMD"
+    "description": "Server updates automatically on restart via SteamCMD"
   },
 
   "configGroups": [
-    { "id": "general", "label": "Generelt", "order": 1 },
-    { "id": "gameplay", "label": "Gameplay", "order": 2 }
+    { "id": "general", "label": "General", "order": 1 },
+    { "id": "gameplay", "label": "Gameplay", "order": 2 },
+    { "id": "network", "label": "Network", "order": 3, "advanced": true }
   ],
 
   "environment": {
@@ -68,25 +69,94 @@
         "label": "Max Players",
         "type": "number",
         "default": 16,
-        "group": "general"
-      },
-      {
-        "key": "CS2_GAMETYPE",
-        "label": "Game Type",
-        "type": "select",
-        "options": ["0", "1", "2", "3"],
-        "default": "0",
-        "group": "gameplay"
+        "group": "general",
+        "validation": { "min": 2, "max": 64 }
       },
       {
         "key": "CS2_RCONPW",
         "label": "RCON Password",
         "type": "password",
         "default": "",
-        "group": "general"
+        "group": "general",
+        "description": "Required for remote console access"
+      },
+      {
+        "key": "CS2_PW",
+        "label": "Server Password",
+        "type": "password",
+        "default": "",
+        "group": "general",
+        "description": "Leave empty for public server"
+      },
+      {
+        "key": "CS2_GAMETYPE",
+        "label": "Game Type",
+        "type": "select",
+        "options": ["0", "1", "2", "3", "4"],
+        "default": "0",
+        "group": "gameplay",
+        "description": "0=Casual, 1=Competitive, 2=Wingman, 3=Deathmatch, 4=Custom"
+      },
+      {
+        "key": "CS2_GAMEMODE",
+        "label": "Game Mode",
+        "type": "select",
+        "options": ["0", "1", "2"],
+        "default": "0",
+        "group": "gameplay",
+        "description": "0=Normal, 1=Arms Race, 2=Demolition"
+      },
+      {
+        "key": "CS2_MAPGROUP",
+        "label": "Map Group",
+        "type": "string",
+        "default": "mg_active",
+        "group": "gameplay",
+        "description": "mg_active, mg_delta, mg_cs2, or custom mapgroup"
+      },
+      {
+        "key": "CS2_STARTMAP",
+        "label": "Start Map",
+        "type": "string",
+        "default": "de_dust2",
+        "group": "gameplay"
+      },
+      {
+        "key": "CS2_CHEATS",
+        "label": "Allow Cheats",
+        "type": "boolean",
+        "default": false,
+        "group": "gameplay"
+      },
+      {
+        "key": "CS2_LAN",
+        "label": "LAN Only",
+        "type": "boolean",
+        "default": false,
+        "group": "network",
+        "description": "Restrict to local network only"
+      },
+      {
+        "key": "TV_ENABLE",
+        "label": "Enable GOTV",
+        "type": "boolean",
+        "default": false,
+        "group": "network",
+        "description": "Enable spectator TV"
       }
     ]
   },
 
-  "configFiles": []
+  "configFiles": [],
+
+  "quickCommands": [
+    { "label": "Status", "command": "status" },
+    { "label": "Map de_dust2", "command": "changelevel de_dust2" },
+    { "label": "Map de_mirage", "command": "changelevel de_mirage" },
+    { "label": "Map de_inferno", "command": "changelevel de_inferno" },
+    { "label": "Map de_nuke", "command": "changelevel de_nuke" },
+    { "label": "Restart round", "command": "mp_restartgame 1" },
+    { "label": "Pause", "command": "mp_pause_match" },
+    { "label": "Unpause", "command": "mp_unpause_match" }
+  ]
 }

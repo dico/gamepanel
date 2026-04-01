@@ -10,9 +10,9 @@ import { auditRepo } from '../db/repositories/audit-repo.js';
 import { dockerManager } from '../docker/docker-manager.js';
 import { getTemplate } from '../templates/template-loader.js';
 import { generateServerSlug } from '../utils/slug.js';
+import type { GameTemplate, PortMapping } from '@gamepanel/shared';
 import { findAvailablePorts } from '../services/port-allocator.js';
 import { config } from '../config.js';
-import type { PortMapping } from '@gamepanel/shared';
 
 const IMPORT_DIR = '/opt/gamepanel/import';
 
