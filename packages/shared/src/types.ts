@@ -74,6 +74,7 @@ export interface GameTemplate {
   configGroups: ConfigGroup[];
   environment: EnvironmentConfig;
   configFiles: ConfigFileDefinition[];
+  quickCommands?: { label: string; command: string }[];
 }
 
 export interface DockerConfig {

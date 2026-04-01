@@ -231,6 +231,44 @@ export async function serverRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  // Send command to server via RCON
+  app.post<{
+    Params: { id: string };
+    Body: { command: string };
+  }>('/api/servers/:id/command', {
+    onRequest: requireRole('operator'),
+  }, async (request, reply) => {
+    const server = serverRepo.findById(request.params.id);
+    if (!server) return reply.status(404).send({ error: 'NotFound', message: 'Server not found' });
+    if (!server.containerId || server.status !== 'running') {
+      return reply.status(400).send({ error: 'BadRequest', message: 'Server is not running' });
+    }
+
+    const { command } = request.body;
+    if (!command) return reply.status(400).send({ error: 'BadRequest', message: 'command is required' });
+
+    try {
+      const docker = (await import('../docker/node-pool.js')).getDocker(server.nodeId);
+      const container = docker.getContainer(server.containerId);
+      const exec = await container.exec({
+        Cmd: ['rcon-cli', command],
+        AttachStdout: true,
+        AttachStderr: true,
+      });
+      const stream = await exec.start({ hijack: true, stdin: false });
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve) => {
+        stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+        stream.on('end', resolve);
+        setTimeout(resolve, 5000);
+      });
+      const output = Buffer.concat(chunks).toString('utf-8').trim();
+      return { data: { output } };
+    } catch (err: any) {
+      return reply.status(500).send({ error: 'CommandError', message: err.message });
+    }
+  });
+
   // Player history for a server
   app.get<{
     Params: { id: string };

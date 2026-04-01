@@ -87,6 +87,32 @@ export class ServerPage extends LitElement {
     .tab:hover { color: var(--text-primary); }
     .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+    .action-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      gap: 16px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .action-label {
+      color: white;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
     .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
     .info-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
     .info-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
@@ -101,6 +127,7 @@ export class ServerPage extends LitElement {
   @state() private externalHost = '';
   @state() private showMoreMenu = false;
   @state() private renaming = false;
+  @state() private actionInProgress = '';
   private cleanupWs?: () => void;
 
   connectedCallback() {
@@ -161,14 +188,20 @@ export class ServerPage extends LitElement {
       navigate('/');
       return;
     }
-    if (action === 'start' || action === 'restart' || action === 'recreate') {
-      this.server = { ...this.server, status: 'creating' };
-    } else if (action === 'stop') {
-      this.server = { ...this.server, status: 'stopped' };
+    const labels: Record<string, string> = {
+      start: 'Starting server...',
+      stop: 'Stopping server...',
+      restart: 'Restarting server...',
+      recreate: 'Recreating server...',
+    };
+    this.actionInProgress = labels[action] || `${action}...`;
+
+    try {
+      await POST(`/api/servers/${this.server.id}/${action}`);
+    } catch (err: any) {
+      showToast(err.body?.message || `${action} failed`, 'error');
     }
-    showToast(`Server ${action} requested`, 'info');
-    try { await POST(`/api/servers/${this.server.id}/${action}`); }
-    catch (err: any) { showToast(err.body?.message || `${action} failed`, 'error'); }
+    this.actionInProgress = '';
     this.loadServer();
   }
 
@@ -177,6 +210,13 @@ export class ServerPage extends LitElement {
     const s = this.server;
 
     return html`
+      ${this.actionInProgress ? html`
+        <div class="action-overlay">
+          <div class="spinner"></div>
+          <div class="action-label">${this.actionInProgress}</div>
+        </div>
+      ` : ''}
+
       <a href="/" class="back">&larr; Back to servers</a>
 
       <div class="header">
@@ -231,8 +271,8 @@ export class ServerPage extends LitElement {
             ${{ console: 'Console', players: 'Players', config: 'Configuration', files: 'Files', backups: 'Backups', info: 'Info' }[tab]}</button>`)}
       </div>
 
-      ${this.activeTab === 'console' ? html`<server-console .serverId=${this.serverId}></server-console>` : ''}
-      ${this.activeTab === 'players' ? html`<player-list .serverId=${this.serverId}></player-list>` : ''}
+      ${this.activeTab === 'console' ? html`<server-console .serverId=${this.serverId} .quickCommands=${this.template?.quickCommands ?? []}></server-console>` : ''}
+      ${this.activeTab === 'players' ? html`<player-list .serverId=${this.serverId} .serverConfig=${s.configValues}></player-list>` : ''}
       ${this.activeTab === 'config' && this.template ? html`<config-form .server=${s} .template=${this.template} @saved=${() => this.loadServer()}></config-form>` : ''}
       ${this.activeTab === 'files' ? html`<file-manager .serverId=${this.serverId}></file-manager>` : ''}
       ${this.activeTab === 'backups' ? html`<backup-manager .serverId=${this.serverId} .serverStatus=${s.status}></backup-manager>` : ''}

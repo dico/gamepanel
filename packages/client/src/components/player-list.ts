@@ -120,7 +120,9 @@ export class PlayerList extends LitElement {
   `];
 
   @property() serverId = '';
+  @property({ type: Object }) serverConfig: Record<string, string> = {};
   @state() private onlinePlayers: string[] = [];
+  @state() private whitelistedNames = new Set<string>();
   @state() private onlineCount = 0;
   @state() private maxPlayers = 0;
   @state() private history: PlayerRecord[] = [];
@@ -129,6 +131,7 @@ export class PlayerList extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.loadHistory();
+    this.loadWhitelist();
 
     this.cleanupWs = onWsEvent((event) => {
       if (event.type === 'server:players' && event.serverId === this.serverId) {
@@ -151,6 +154,30 @@ export class PlayerList extends LitElement {
       const res = await GET<{ data: PlayerRecord[] }>(`/api/servers/${this.serverId}/players?limit=50`);
       this.history = res.data;
     } catch { /* ignore */ }
+  }
+
+  private async loadWhitelist() {
+    try {
+      const res = await GET<{ data: { content: string } }>(`/api/servers/${this.serverId}/files/read?path=/whitelist.json`);
+      const list = JSON.parse(res.data.content || '[]') as { name: string }[];
+      this.whitelistedNames = new Set(list.map(p => p.name.toLowerCase()));
+    } catch { /* no whitelist file */ }
+  }
+
+  private async addToWhitelist(playerName: string) {
+    try {
+      const { POST } = await import('../services/api.js');
+      await POST(`/api/servers/${this.serverId}/command`, { command: `whitelist add ${playerName}` });
+      this.whitelistedNames = new Set([...this.whitelistedNames, playerName.toLowerCase()]);
+      showToast(`${playerName} added to whitelist`, 'success');
+      // Refresh both player-list whitelist cache and player-manager component
+      setTimeout(() => {
+        this.loadWhitelist();
+        this.shadowRoot?.querySelector('player-manager')?.dispatchEvent(new CustomEvent('refresh'));
+      }, 1000);
+    } catch {
+      showToast('Failed to add to whitelist', 'error');
+    }
   }
 
   private async copyUuid(uuid: string) {
@@ -215,15 +242,18 @@ export class PlayerList extends LitElement {
                 <span class="player-name">${p.playerName}</span>
                 <span class="player-uuid">${p.playerUuid || '-'}</span>
                 <span class="player-time">${this.formatTime(p.lastSeen)}</span>
-                ${p.playerUuid ? html`
-                  <button class="copy-uuid" @click=${() => this.copyUuid(p.playerUuid!)} title="Copy UUID">Copy</button>
-                ` : html`<span></span>`}
+                <span style="display:flex;gap:4px">
+                  ${p.playerUuid ? html`<button class="copy-uuid" @click=${() => this.copyUuid(p.playerUuid!)} title="Copy UUID">Copy</button>` : ''}
+                  ${this.serverConfig['white-list'] === 'true' && !this.whitelistedNames.has(p.playerName.toLowerCase())
+                    ? html`<button class="copy-uuid" style="color:var(--success)" @click=${() => this.addToWhitelist(p.playerName)} title="Add to whitelist">+ Whitelist</button>`
+                    : ''}
+                </span>
               </div>
             `)}
           </div>
         `}
 
-      <player-manager .serverId=${this.serverId}></player-manager>
+      <player-manager .serverId=${this.serverId} .whitelistEnabled=${this.serverConfig['white-list'] === 'true'}></player-manager>
     `;
   }
 }

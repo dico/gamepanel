@@ -20,6 +20,30 @@ export function buildCreateOptions(
     env.push(`${key}=${value}`);
   }
 
+  // Map managed config values to Docker env vars (for images like itzg/minecraft-server
+  // that control server.properties via env vars at startup)
+  const configToEnv: Record<string, string> = {
+    'gamemode': 'MODE',
+    'difficulty': 'DIFFICULTY',
+    'pvp': 'PVP',
+    'max-players': 'MAX_PLAYERS',
+    'motd': 'MOTD',
+    'white-list': 'ENABLE_WHITELIST',
+    'enforce-whitelist': 'ENFORCE_WHITELIST',
+    'online-mode': 'ONLINE_MODE',
+    'view-distance': 'VIEW_DISTANCE',
+    'simulation-distance': 'SIMULATION_DISTANCE',
+    'spawn-protection': 'SPAWN_PROTECTION',
+    'hardcore': 'HARDCORE',
+    'allow-flight': 'ALLOW_FLIGHT',
+    'level-seed': 'SEED',
+  };
+  for (const [cfgKey, envKey] of Object.entries(configToEnv)) {
+    if (server.configValues[cfgKey] !== undefined) {
+      env.push(`${envKey}=${server.configValues[cfgKey]}`);
+    }
+  }
+
   // With host networking, set server port via env if host port differs from container port
   for (const port of server.ports) {
     if (port.host !== port.container) {

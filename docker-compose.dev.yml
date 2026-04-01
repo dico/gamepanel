@@ -25,5 +25,7 @@ services:
       - DATA_DIR=/app/data
       - HOST_DATA_DIR=${HOST_DATA_DIR:-/opt/gamepanel/data}
       - TEMPLATES_DIR=/app/templates
-      - QUERY_HOST=${QUERY_HOST:-host.docker.internal}
+      - QUERY_HOST=${QUERY_HOST:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped

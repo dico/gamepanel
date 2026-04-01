@@ -186,5 +186,16 @@
         }
       ]
     }
+  ],
+
+  "quickCommands": [
+    { "label": "List players", "command": "list" },
+    { "label": "Keep Inventory ON", "command": "gamerule keepInventory true" },
+    { "label": "Keep Inventory OFF", "command": "gamerule keepInventory false" },
+    { "label": "Day", "command": "time set day" },
+    { "label": "Night", "command": "time set night" },
+    { "label": "Clear weather", "command": "weather clear" },
+    { "label": "Save", "command": "save-all" },
+    { "label": "Whitelist reload", "command": "whitelist reload" }
   ]
 }

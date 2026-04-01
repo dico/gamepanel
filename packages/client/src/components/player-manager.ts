@@ -86,6 +86,7 @@ export class PlayerManager extends LitElement {
   `];
 
   @property() serverId = '';
+  @property({ type: Boolean }) whitelistEnabled = false;
   @state() private whitelist: McPlayer[] = [];
   @state() private ops: McOp[] = [];
   @state() private newWhitelistName = '';
@@ -94,6 +95,7 @@ export class PlayerManager extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.loadData();
+    this.addEventListener('refresh', () => this.loadData());
   }
 
   private async loadData() {
@@ -112,24 +114,6 @@ export class PlayerManager extends LitElement {
     } catch { this.ops = []; }
   }
 
-  private async saveWhitelist() {
-    try {
-      await api(`/api/servers/${this.serverId}/files/write`, {
-        method: 'PUT',
-        body: JSON.stringify({ path: '/whitelist.json', content: JSON.stringify(this.whitelist, null, 2) }),
-      });
-    } catch { /* ignore */ }
-  }
-
-  private async saveOps() {
-    try {
-      await api(`/api/servers/${this.serverId}/files/write`, {
-        method: 'PUT',
-        body: JSON.stringify({ path: '/ops.json', content: JSON.stringify(this.ops, null, 2) }),
-      });
-    } catch { /* ignore */ }
-  }
-
   private async addToWhitelist() {
     const name = this.newWhitelistName.trim();
     if (!name) return;
@@ -138,15 +122,18 @@ export class PlayerManager extends LitElement {
       return;
     }
 
-    this.whitelist = [...this.whitelist, { uuid: '', name }];
+    // Use console command — takes effect immediately, no restart needed
+    await this.runCommand(`whitelist add ${name}`);
     this.newWhitelistName = '';
-    await this.saveWhitelist();
+
+    // Reload list from file (server updates it)
+    setTimeout(() => this.loadData(), 1000);
     showToast(`${name} added to whitelist`, 'success');
   }
 
   private async removeFromWhitelist(name: string) {
-    this.whitelist = this.whitelist.filter(p => p.name !== name);
-    await this.saveWhitelist();
+    await this.runCommand(`whitelist remove ${name}`);
+    setTimeout(() => this.loadData(), 1000);
     showToast(`${name} removed from whitelist`, 'success');
   }
 
@@ -158,42 +145,53 @@ export class PlayerManager extends LitElement {
       return;
     }
 
-    this.ops = [...this.ops, { uuid: '', name, level: 4 }];
+    await this.runCommand(`op ${name}`);
     this.newOpName = '';
-    await this.saveOps();
+    setTimeout(() => this.loadData(), 1000);
     showToast(`${name} added as operator`, 'success');
   }
 
   private async removeOp(name: string) {
-    this.ops = this.ops.filter(p => p.name !== name);
-    await this.saveOps();
+    await this.runCommand(`deop ${name}`);
+    setTimeout(() => this.loadData(), 1000);
     showToast(`${name} removed from operators`, 'success');
+  }
+
+  private async runCommand(command: string) {
+    try {
+      await api(`/api/servers/${this.serverId}/command`, {
+        method: 'POST',
+        body: JSON.stringify({ command }),
+      });
+    } catch { /* ignore — command endpoint might not exist yet */ }
   }
 
   render() {
     return html`
-      <div class="section-title">Whitelist</div>
-      <div class="player-card">
-        <div class="player-card-header">
-          <span>Whitelisted Players (${this.whitelist.length})</span>
+      ${this.whitelistEnabled ? html`
+        <div class="section-title">Whitelist</div>
+        <div class="player-card">
+          <div class="player-card-header">
+            <span>Whitelisted Players (${this.whitelist.length})</span>
+          </div>
+          ${this.whitelist.length === 0
+            ? html`<div class="empty-msg">No players whitelisted. Only whitelisted players can join the server.</div>`
+            : this.whitelist.map(p => html`
+              <div class="player-row">
+                <span class="player-name">${p.name}</span>
+                <span class="player-uuid">${p.uuid || 'UUID resolved on join'}</span>
+                <button class="btn btn-sm btn-danger" @click=${() => this.removeFromWhitelist(p.name)}>Remove</button>
+              </div>
+            `)
+          }
+          <div class="add-form">
+            <input type="text" placeholder="Player name" .value=${this.newWhitelistName}
+              @input=${(e: Event) => this.newWhitelistName = (e.target as HTMLInputElement).value}
+              @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && this.addToWhitelist()}>
+            <button class="btn btn-sm btn-primary" @click=${() => this.addToWhitelist()}>Add</button>
+          </div>
         </div>
-        ${this.whitelist.length === 0
-          ? html`<div class="empty-msg">No players whitelisted. Add players below — they can join when whitelist is enabled in Configuration.</div>`
-          : this.whitelist.map(p => html`
-            <div class="player-row">
-              <span class="player-name">${p.name}</span>
-              <span class="player-uuid">${p.uuid || 'UUID will be resolved on join'}</span>
-              <button class="btn btn-sm btn-danger" @click=${() => this.removeFromWhitelist(p.name)}>Remove</button>
-            </div>
-          `)
-        }
-        <div class="add-form">
-          <input type="text" placeholder="Player name" .value=${this.newWhitelistName}
-            @input=${(e: Event) => this.newWhitelistName = (e.target as HTMLInputElement).value}
-            @keydown=${(e: KeyboardEvent) => e.key === 'Enter' && this.addToWhitelist()}>
-          <button class="btn btn-sm btn-primary" @click=${() => this.addToWhitelist()}>Add</button>
-        </div>
-      </div>
+      ` : ''}
 
       <div class="section-title">Operators (Admin)</div>
       <div class="player-card">
@@ -219,7 +217,7 @@ export class PlayerManager extends LitElement {
       </div>
 
       <p style="font-size:12px;color:var(--text-muted);margin-top:8px">
-        Changes take effect after server restart. UUIDs are resolved automatically when players connect.
+        Changes take effect immediately — no restart needed.
       </p>
     `;
   }

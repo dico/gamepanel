@@ -222,14 +222,34 @@ async function sendCommand(serverId: string, command: string): Promise<void> {
   const docker = getDocker(server.nodeId);
   const container = docker.getContainer(server.containerId);
 
-  // Attach to stdin and write command
-  const stream = await container.attach({ stream: true, stdin: true, hijack: true });
-  stream.write(command + '\n');
-  stream.end();
-
-  // Echo command to console
+  // Echo command to console immediately
   pushToBuffer(serverId, `> ${command}`);
   broadcastToServer(serverId, { type: 'command', line: `> ${command}` });
+
+  // Try rcon-cli first (most reliable for Minecraft), fall back to stdin
+  try {
+    const exec = await container.exec({
+      Cmd: ['rcon-cli', command],
+      AttachStdout: true,
+      AttachStderr: true,
+    });
+    const execStream = await exec.start({ hijack: true, stdin: false });
+    execStream.on('data', (chunk: Buffer) => {
+      for (const line of demuxDockerStream(chunk)) {
+        if (line.trim()) {
+          pushToBuffer(serverId, line);
+          broadcastToServer(serverId, { type: 'log', line });
+        }
+      }
+    });
+  } catch {
+    // Fall back to stdin attach
+    try {
+      const stream = await container.attach({ stream: true, stdin: true, hijack: true });
+      stream.write(command + '\n');
+      stream.end();
+    } catch { /* ignore */ }
+  }
 }
 
 function broadcastToServer(serverId: string, data: unknown): void {

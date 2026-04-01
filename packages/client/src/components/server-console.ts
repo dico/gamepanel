@@ -47,9 +47,29 @@ export class ServerConsole extends LitElement {
       outline: none;
       height: auto;
     }
+
+    .quick-commands {
+      display: flex;
+      gap: 4px;
+      padding: 6px 12px;
+      border-top: 1px solid var(--border-light);
+      flex-wrap: wrap;
+    }
+    .quick-cmd {
+      padding: 3px 10px;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .quick-cmd:hover { background: var(--bg-tertiary); color: var(--text-primary); }
   `];
 
   @property() serverId = '';
+  @property({ type: Array }) quickCommands: { label: string; command: string }[] = [];
   @state() private lines: string[] = [];
   @state() private commandHistory: string[] = [];
   @state() private historyIndex = -1;
@@ -130,6 +150,11 @@ export class ServerConsole extends LitElement {
     input.value = '';
   }
 
+  private runQuickCommand(cmd: string) {
+    this.ws?.send(JSON.stringify({ type: 'command', command: cmd }));
+    this.commandHistory.push(cmd);
+  }
+
   private renderLine(line: string) {
     if (line.startsWith('>')) return line;
     const segments = parseAnsi(line);
@@ -155,6 +180,13 @@ export class ServerConsole extends LitElement {
           <span>&gt;</span>
           <input type="text" placeholder="Enter command..." @keydown=${this.handleKeydown}>
         </div>
+        ${this.quickCommands.length > 0 ? html`
+          <div class="quick-commands">
+            ${this.quickCommands.map(qc => html`
+              <button class="quick-cmd" @click=${() => this.runQuickCommand(qc.command)} title=${qc.command}>${qc.label}</button>
+            `)}
+          </div>
+        ` : ''}
       </div>
     `;
   }

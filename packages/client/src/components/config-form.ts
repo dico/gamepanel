@@ -102,7 +102,7 @@ export class ConfigForm extends LitElement {
 
     try {
       await PATCH(`/api/servers/${this.server.id}`, { environment, configValues });
-      showToast('Configuration saved. Restart for changes to take effect.', 'success');
+      showToast('Configuration saved. Recreate the server for changes to take effect.', 'success');
       this.dirty = false;
       this.dispatchEvent(new CustomEvent('saved'));
     } catch (err: any) {
