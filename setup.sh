@@ -106,7 +106,9 @@ do_install() {
   log "Setting up directories..."
   mkdir -p "$GAMEPANEL_DIR/data/servers"
   mkdir -p "$GAMEPANEL_DIR/data/backups"
+  mkdir -p "$GAMEPANEL_DIR/import"
   mkdir -p "$GAMEPANEL_DIR/templates"
+  chmod 777 "$GAMEPANEL_DIR/import"
 
   log "Downloading game templates..."
   for file in minecraft-java.json cs2.json; do
@@ -136,6 +138,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./templates:/app/templates
+      - ./import:/opt/gamepanel/import
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       NODE_ENV: production

@@ -19,30 +19,28 @@ export class ImportWizard extends LitElement {
   static styles = [sharedStyles, css`
     :host { display: block; }
 
+    .subtitle { color: var(--text-primary); margin-bottom: 24px; font-size: 14px; }
+
     .steps {
       display: flex;
       gap: 8px;
       margin-bottom: 32px;
     }
     .step {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--text-muted);
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--text-secondary);
     }
     .step.active { color: var(--accent); font-weight: 600; }
     .step.done { color: var(--success); }
     .step-num {
-      width: 24px; height: 24px;
-      border-radius: 50%;
+      width: 24px; height: 24px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 12px; font-weight: 700;
-      background: var(--bg-hover); color: var(--text-muted);
+      background: var(--bg-hover); color: var(--text-secondary);
     }
     .step.active .step-num { background: var(--accent); color: white; }
     .step.done .step-num { background: var(--success); color: white; }
-    .step-divider { flex: 0; width: 32px; height: 1px; background: var(--border); }
+    .step-divider { width: 32px; height: 1px; background: var(--border); }
 
     .section {
       background: var(--bg-secondary);
@@ -52,24 +50,39 @@ export class ImportWizard extends LitElement {
       margin-bottom: 24px;
     }
 
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .section-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 16px; line-height: 1.5; }
+
+    .method-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .method-card {
+      padding: 20px;
+      background: var(--bg-primary);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .method-card:hover { border-color: var(--accent); }
+    .method-card.selected { border-color: var(--accent); background: var(--info-bg); }
+    .method-card h3 { font-size: 14px; margin-bottom: 6px; }
+    .method-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+
     .hint {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 6px;
-      line-height: 1.4;
+      font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.4;
     }
 
     .folder-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-top: 16px;
+      display: flex; flex-direction: column; gap: 4px; margin-top: 16px;
     }
 
     .folder-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      display: flex; align-items: center; gap: 12px;
       padding: 12px 16px;
       background: var(--bg-primary);
       border: 1px solid var(--border);
@@ -81,34 +94,51 @@ export class ImportWizard extends LitElement {
     .folder-item.selected { border-color: var(--accent); background: var(--info-bg); }
     .folder-name { font-weight: 500; flex: 1; }
     .folder-meta { font-size: 12px; color: var(--text-secondary); display: flex; gap: 12px; }
-    .folder-detected { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: var(--success-bg); color: var(--success); }
+    .folder-detected {
+      font-size: 11px; padding: 2px 8px; border-radius: 8px;
+      background: var(--success-bg); color: var(--success);
+    }
 
-    .empty-import {
-      padding: 32px;
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px;
       text-align: center;
-      color: var(--text-muted);
+      color: var(--text-secondary);
+      font-size: 14px;
+      transition: all 0.15s;
+      cursor: pointer;
     }
-    .empty-import code {
-      display: block;
-      margin-top: 12px;
-      padding: 12px;
-      background: var(--bg-primary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      user-select: all;
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--info-bg);
+    }
+    .dropzone input { display: none; }
+    .dropzone .size-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+    .upload-progress {
+      padding: 16px;
+      text-align: center;
+      color: var(--accent);
+      font-size: 14px;
     }
 
-    .actions {
-      display: flex;
+    .confirm-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
       gap: 8px;
-      justify-content: flex-end;
+      font-size: 14px;
     }
+    .confirm-grid .label { color: var(--text-secondary); }
+    .confirm-grid .value { font-family: var(--font-mono); font-size: 13px; }
 
+    .actions { display: flex; gap: 8px; justify-content: flex-end; }
     input, select { margin-bottom: 12px; }
   `];
 
   @state() private step = 1;
+  @state() private method: 'folder' | 'upload' | null = null;
   @state() private folders: ImportEntry[] = [];
   @state() private importDir = '';
   @state() private importDirExists = false;
@@ -119,6 +149,9 @@ export class ImportWizard extends LitElement {
   @state() private selectedTemplate = '';
   @state() private selectedNode = 'local';
   @state() private importing = false;
+  @state() private uploading = false;
+  @state() private uploadedPath = '';
+  @state() private dragover = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -141,19 +174,59 @@ export class ImportWizard extends LitElement {
   private selectFolder(folder: ImportEntry) {
     this.selectedFolder = folder;
     this.serverName = folder.name.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    if (folder.detectedGame) {
-      this.selectedTemplate = folder.detectedGame;
-    }
+    if (folder.detectedGame) this.selectedTemplate = folder.detectedGame;
     this.step = 2;
   }
 
+  private async handleZipUpload(file: File) {
+    if (!file.name.endsWith('.zip') && !file.name.endsWith('.tar.gz') && !file.name.endsWith('.tgz')) {
+      showToast('Please upload a .zip or .tar.gz file', 'error');
+      return;
+    }
+
+    this.uploading = true;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/import/upload', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!res.ok) throw new Error((await res.json()).message || 'Upload failed');
+      const json = await res.json();
+      this.uploadedPath = json.data.path;
+      this.serverName = file.name.replace(/\.(zip|tar\.gz|tgz)$/i, '').replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      showToast('File uploaded and extracted', 'success');
+      this.step = 2;
+    } catch (err: any) {
+      showToast(err.message || 'Upload failed', 'error');
+    } finally {
+      this.uploading = false;
+    }
+  }
+
+  private handleDrop(e: DragEvent) {
+    e.preventDefault();
+    this.dragover = false;
+    if (e.dataTransfer?.files[0]) this.handleZipUpload(e.dataTransfer.files[0]);
+  }
+
+  private handleFileInput(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) this.handleZipUpload(file);
+  }
+
   private async doImport() {
-    if (!this.selectedFolder || !this.serverName || !this.selectedTemplate) return;
+    if (!this.serverName || !this.selectedTemplate) return;
+    const sourcePath = this.method === 'upload' ? this.uploadedPath : this.selectedFolder?.path;
+    if (!sourcePath) return;
 
     this.importing = true;
     try {
       const res = await POST<{ data: { id: string } }>('/api/import', {
-        sourcePath: this.selectedFolder.path,
+        sourcePath,
         name: this.serverName,
         templateSlug: this.selectedTemplate,
         nodeId: this.selectedNode,
@@ -177,22 +250,15 @@ export class ImportWizard extends LitElement {
   render() {
     return html`
       <h1 style="margin-bottom:8px">Import Server</h1>
-      <p style="color:var(--text-secondary);margin-bottom:24px;font-size:14px">
-        Import an existing game server from files on this machine.
-      </p>
+      <p class="subtitle">Import an existing game server from a backup or file transfer.</p>
 
       <div class="steps">
-        <div class="step ${this.step >= 1 ? (this.step > 1 ? 'done' : 'active') : ''}">
-          <span class="step-num">1</span> Select folder
-        </div>
-        <div class="step-divider"></div>
-        <div class="step ${this.step >= 2 ? (this.step > 2 ? 'done' : 'active') : ''}">
-          <span class="step-num">2</span> Configure
-        </div>
-        <div class="step-divider"></div>
-        <div class="step ${this.step >= 3 ? 'active' : ''}">
-          <span class="step-num">3</span> Import
-        </div>
+        ${[['1', 'Choose source'], ['2', 'Configure'], ['3', 'Import']].map(([num, label], i) => html`
+          ${i > 0 ? html`<div class="step-divider"></div>` : ''}
+          <div class="step ${this.step > i + 1 ? 'done' : this.step === i + 1 ? 'active' : ''}">
+            <span class="step-num">${num}</span> ${label}
+          </div>
+        `)}
       </div>
 
       ${this.step === 1 ? this.renderStep1() : ''}
@@ -202,51 +268,88 @@ export class ImportWizard extends LitElement {
   }
 
   private renderStep1() {
-    if (!this.importDirExists || this.folders.length === 0) {
-      return html`
-        <div class="section">
-          <div class="empty-import">
-            <p>Copy your server files to the import directory on this machine:</p>
-            <code>${this.importDir || '/opt/gamepanel/import'}</code>
-            <p style="margin-top:16px">
-              Each game server should be in its own subfolder. Use SCP, WinSCP, samba, or any file transfer method.
-            </p>
-            <p style="margin-top:12px">
-              <button class="btn" @click=${() => this.loadData()}>Refresh</button>
-            </p>
-          </div>
-        </div>
-      `;
-    }
-
     return html`
       <div class="section">
-        <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">
-          Select a folder from <strong>${this.importDir}</strong> to import:
-        </p>
-        <div class="folder-list">
-          ${this.folders.map(f => html`
-            <div class="folder-item ${this.selectedFolder?.path === f.path ? 'selected' : ''}"
-              @click=${() => this.selectFolder(f)}>
-              <span class="folder-name">${f.name}</span>
-              <div class="folder-meta">
-                <span>${f.fileCount} files</span>
-                <span>${this.formatSize(f.size)}</span>
-              </div>
-              ${f.detectedGame ? html`<span class="folder-detected">${f.detectedGame}</span>` : ''}
-            </div>
-          `)}
+        <div class="section-title">How would you like to import?</div>
+        <div class="section-desc">Choose how to get your server files into GamePanel.</div>
+
+        <div class="method-cards">
+          <div class="method-card ${this.method === 'upload' ? 'selected' : ''}"
+            @click=${() => this.method = 'upload'}>
+            <h3>Upload archive</h3>
+            <p>Upload a .zip or .tar.gz file containing your server data. Best for files under 1 GB.</p>
+          </div>
+          <div class="method-card ${this.method === 'folder' ? 'selected' : ''}"
+            @click=${() => this.method = 'folder'}>
+            <h3>Server folder</h3>
+            <p>Copy files to the server first via SCP, WinSCP, or samba, then select the folder here. Best for large files.</p>
+          </div>
         </div>
       </div>
+
+      ${this.method === 'upload' ? html`
+        <div class="section">
+          ${this.uploading ? html`
+            <div class="upload-progress">Uploading and extracting...</div>
+          ` : html`
+            <div class="dropzone ${this.dragover ? 'dragover' : ''}"
+              @drop=${this.handleDrop}
+              @dragover=${(e: DragEvent) => { e.preventDefault(); this.dragover = true; }}
+              @dragleave=${() => this.dragover = false}
+              @click=${() => (this.shadowRoot?.querySelector('.zip-input') as HTMLInputElement)?.click()}>
+              Drop a .zip or .tar.gz file here, or click to browse
+              <div class="size-hint">Recommended for files under 1 GB</div>
+            </div>
+            <input class="zip-input" type="file" accept=".zip,.tar.gz,.tgz" style="display:none" @change=${this.handleFileInput}>
+          `}
+        </div>
+      ` : ''}
+
+      ${this.method === 'folder' ? html`
+        <div class="section">
+          ${this.folders.length > 0 ? html`
+            <div class="section-desc">
+              Select a folder from <strong>${this.importDir}</strong>:
+            </div>
+            <div class="folder-list">
+              ${this.folders.map(f => html`
+                <div class="folder-item" @click=${() => this.selectFolder(f)}>
+                  <span class="folder-name">${f.name}</span>
+                  <div class="folder-meta">
+                    <span>${f.fileCount} files</span>
+                    <span>${this.formatSize(f.size)}</span>
+                  </div>
+                  ${f.detectedGame ? html`<span class="folder-detected">${f.detectedGame}</span>` : ''}
+                </div>
+              `)}
+            </div>
+            <div class="hint" style="margin-top:12px">
+              Don't see your folder? Copy files to <code>${this.importDir}</code> and click Refresh.
+            </div>
+            <button class="btn btn-sm" style="margin-top:8px" @click=${() => this.loadData()}>Refresh</button>
+          ` : html`
+            <div class="section-title">No folders found</div>
+            <div class="section-desc">
+              Copy your server files to the import directory on this machine, then click Refresh:
+            </div>
+            <code style="display:block;padding:12px;background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;color:var(--text-primary);user-select:all;margin-bottom:16px">
+              ${this.importDir || '/opt/gamepanel/import'}
+            </code>
+            <div class="section-desc">
+              Each game server should be in its own subfolder. Use SCP, WinSCP, samba, or any file transfer method.
+            </div>
+            <button class="btn" @click=${() => this.loadData()}>Refresh</button>
+          `}
+        </div>
+      ` : ''}
     `;
   }
 
   private renderStep2() {
     return html`
       <div class="section">
-        <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">
-          Importing from: <strong>${this.selectedFolder?.name}</strong>
-        </p>
+        <div class="section-title">Configure server</div>
+        <div class="section-desc">Set a name and select the matching game template for your imported files.</div>
 
         <label>Server Name</label>
         <input type="text" .value=${this.serverName}
@@ -258,7 +361,7 @@ export class ImportWizard extends LitElement {
           <option value="">Select game...</option>
           ${this.templates.map(t => html`<option value=${t.slug} ?selected=${this.selectedTemplate === t.slug}>${t.name}</option>`)}
         </select>
-        <div class="hint">Make sure this matches the game type of the files you're importing.</div>
+        <div class="hint">Must match the game type of the files you are importing.</div>
 
         <label style="margin-top:12px">Node</label>
         <select .value=${this.selectedNode}
@@ -267,36 +370,35 @@ export class ImportWizard extends LitElement {
         </select>
 
         <div class="actions" style="margin-top:16px">
-          <button class="btn" @click=${() => this.step = 1}>Back</button>
-          <button class="btn btn-primary"
-            ?disabled=${!this.serverName || !this.selectedTemplate}
-            @click=${() => this.step = 3}>
-            Continue
-          </button>
+          <button class="btn" @click=${() => { this.step = 1; }}>Back</button>
+          <button class="btn btn-primary" ?disabled=${!this.serverName || !this.selectedTemplate}
+            @click=${() => this.step = 3}>Continue</button>
         </div>
       </div>
     `;
   }
 
   private renderStep3() {
+    const sourcePath = this.method === 'upload' ? this.uploadedPath : this.selectedFolder?.path;
     return html`
       <div class="section">
-        <h3 style="margin-bottom:16px">Confirm Import</h3>
+        <div class="section-title">Confirm import</div>
+        <div class="section-desc">Review the details below, then click Import to create the server.</div>
 
-        <div style="display:grid;grid-template-columns:120px 1fr;gap:8px;font-size:14px">
-          <span style="color:var(--text-secondary)">Source:</span>
-          <span style="font-family:var(--font-mono);font-size:13px">${this.selectedFolder?.path}</span>
-          <span style="color:var(--text-secondary)">Server name:</span>
+        <div class="confirm-grid">
+          <span class="label">Source:</span>
+          <span class="value">${sourcePath}</span>
+          <span class="label">Server name:</span>
           <span>${this.serverName}</span>
-          <span style="color:var(--text-secondary)">Game:</span>
+          <span class="label">Game:</span>
           <span>${this.templates.find(t => t.slug === this.selectedTemplate)?.name ?? this.selectedTemplate}</span>
-          <span style="color:var(--text-secondary)">Node:</span>
+          <span class="label">Node:</span>
           <span>${this.nodes.find(n => n.id === this.selectedNode)?.name ?? this.selectedNode}</span>
         </div>
 
-        <p style="color:var(--text-muted);font-size:12px;margin-top:16px">
-          Files will be moved from the import directory into the server's data folder. The original folder will be removed.
-        </p>
+        <div class="hint" style="margin-top:16px">
+          Files will be moved into the server's data folder. Ports will be assigned automatically.
+        </div>
 
         <div class="actions" style="margin-top:20px">
           <button class="btn" @click=${() => this.step = 2}>Back</button>

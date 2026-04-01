@@ -184,8 +184,10 @@ export class DashboardPage extends LitElement {
     return html`
       <div class="header">
         <h1>Servers</h1>
-        <a href="/import" class="btn">Import</a>
-        <button class="btn btn-primary" @click=${() => this.showCreate = true}>+ New Server</button>
+        <div style="display:flex;gap:8px">
+          <a href="/import" class="btn">Import</a>
+          <button class="btn btn-primary" @click=${() => this.showCreate = true}>+ New Server</button>
+        </div>
       </div>
 
       ${this.servers.length === 0

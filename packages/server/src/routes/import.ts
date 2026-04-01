@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { existsSync, readdirSync, statSync, cpSync, mkdirSync } from 'fs';
+import { existsSync, readdirSync, statSync, cpSync, mkdirSync, createWriteStream } from 'fs';
 import { join, basename } from 'path';
+import { execSync } from 'child_process';
+import { pipeline } from 'stream/promises';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/role.js';
 import { serverRepo } from '../db/repositories/server-repo.js';
@@ -47,6 +49,51 @@ export async function importRoutes(app: FastifyInstance): Promise<void> {
       });
 
     return { data: entries, importDir, exists: true };
+  });
+
+  // Upload and extract a zip/tar.gz for import
+  app.post('/api/import/upload', {
+    onRequest: requireRole('admin'),
+  }, async (request, reply) => {
+    const importDir = process.env.IMPORT_DIR || IMPORT_DIR;
+    if (!existsSync(importDir)) mkdirSync(importDir, { recursive: true });
+
+    const data = await request.file();
+    if (!data) return reply.status(400).send({ error: 'BadRequest', message: 'No file uploaded' });
+
+    const filename = data.filename;
+    const isZip = filename.endsWith('.zip');
+    const isTarGz = filename.endsWith('.tar.gz') || filename.endsWith('.tgz');
+
+    if (!isZip && !isTarGz) {
+      return reply.status(400).send({ error: 'BadRequest', message: 'Only .zip and .tar.gz files are supported' });
+    }
+
+    // Save uploaded file to temp location
+    const tempFile = join(importDir, filename);
+    await pipeline(data.file, createWriteStream(tempFile));
+
+    // Create extraction directory
+    const dirName = filename.replace(/\.(zip|tar\.gz|tgz)$/i, '');
+    const extractDir = join(importDir, dirName);
+    mkdirSync(extractDir, { recursive: true });
+
+    // Extract
+    try {
+      if (isZip) {
+        execSync(`unzip -o "${tempFile}" -d "${extractDir}"`, { timeout: 300_000 });
+      } else {
+        execSync(`tar -xzf "${tempFile}" -C "${extractDir}"`, { timeout: 300_000 });
+      }
+
+      // Clean up archive
+      const { unlinkSync } = await import('fs');
+      unlinkSync(tempFile);
+
+      return { data: { path: extractDir, name: dirName } };
+    } catch (err: any) {
+      return reply.status(500).send({ error: 'ExtractError', message: `Failed to extract: ${err.message}` });
+    }
   });
 
   // Import a server from a directory
