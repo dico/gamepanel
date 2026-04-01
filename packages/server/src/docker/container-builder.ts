@@ -1,5 +1,5 @@
 import type Dockerode from 'dockerode';
-import type { Server, GameTemplate, PortMapping } from '@gamepanel/shared';
+import type { Server, GameTemplate } from '@gamepanel/shared';
 import { config } from '../config.js';
 import { join } from 'path';
 
@@ -20,14 +20,12 @@ export function buildCreateOptions(
     env.push(`${key}=${value}`);
   }
 
-  // Build port bindings
-  const exposedPorts: Record<string, {}> = {};
-  const portBindings: Record<string, Dockerode.PortBinding[]> = {};
-
+  // With host networking, set server port via env if host port differs from container port
   for (const port of server.ports) {
-    const containerPort = `${port.container}/${port.protocol}`;
-    exposedPorts[containerPort] = {};
-    portBindings[containerPort] = [{ HostPort: String(port.host) }];
+    if (port.host !== port.container) {
+      env.push(`SERVER_PORT=${port.host}`);
+      break;
+    }
   }
 
   // Build volume binds — use hostDataDir for Docker bind mounts
@@ -44,13 +42,16 @@ export function buildCreateOptions(
     binds.push(`${serverDataDir}:${template.volumes[0].container}`);
   }
 
+  // Use host networking — Docker bridge networking in Docker 29.x
+  // blocks external access to game ports. Host networking exposes
+  // ports directly on the host, which is simpler and more reliable
+  // for game servers.
   return {
     name: `gamepanel-${server.id}`,
     Image: template.docker.image,
     Env: env,
-    ExposedPorts: exposedPorts,
     HostConfig: {
-      PortBindings: portBindings,
+      NetworkMode: 'host',
       Binds: binds,
       RestartPolicy: { Name: 'no' },
     },
