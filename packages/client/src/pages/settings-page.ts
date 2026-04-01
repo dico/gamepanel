@@ -82,7 +82,7 @@ export class SettingsPage extends LitElement {
     }
   `];
 
-  @state() private version = { current: '', latest: null as string | null, updateAvailable: false, updateCommand: '' };
+  @state() private version = { current: '', updateAvailable: false, updateCommand: '' };
   @state() private settings: Record<string, string> = {};
   @state() private dirty = false;
   @state() private updating = false;
@@ -164,11 +164,11 @@ export class SettingsPage extends LitElement {
           <div class="version-info">
             <span class="version-current">v${this.version.current}</span>
             ${this.version.updateAvailable
-              ? html`<span class="version-status status-warning">Update available: v${this.version.latest}</span>`
+              ? html`<span class="version-status status-warning">Update available</span>`
               : html`<span class="version-status status-success">Up to date</span>`
             }
             <button class="btn btn-primary" ?disabled=${this.updating} @click=${() => this.runUpdate()}>
-              ${this.updating ? 'Updating...' : this.version.updateAvailable ? 'Update now' : 'Check & update'}
+              ${this.updating ? 'Updating...' : this.version.updateAvailable ? 'Update now' : 'Force update'}
             </button>
           </div>
           <div class="update-command">

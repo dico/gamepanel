@@ -34,20 +34,37 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
 
   // Version and update check
   app.get('/api/system/version', async () => {
-    let latest: string | null = null;
     let updateAvailable = false;
+    let remoteDigest: string | null = null;
 
     try {
-      // Check GitHub for latest release tag
-      const res = await fetch('https://api.github.com/repos/dico/gamepanel/tags?per_page=1', {
-        headers: { 'User-Agent': 'GamePanel' },
+      // Check Docker Hub for latest image digest
+      // Compare with our running image to detect actual changes
+      const tokenRes = await fetch('https://auth.docker.io/token?service=registry.docker.io&scope=repository:fosenutvikling/gamepanel:pull', {
         signal: AbortSignal.timeout(5000),
       });
-      if (res.ok) {
-        const tags = await res.json() as { name: string }[];
-        if (tags.length > 0) {
-          latest = tags[0].name.replace(/^v/, '');
-          updateAvailable = latest !== VERSION;
+      if (tokenRes.ok) {
+        const { token } = await tokenRes.json() as { token: string };
+        const manifestRes = await fetch('https://registry-1.docker.io/v2/fosenutvikling/gamepanel/manifests/latest', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.docker.distribution.manifest.v2+json',
+          },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (manifestRes.ok) {
+          remoteDigest = manifestRes.headers.get('docker-content-digest');
+
+          // Get local image digest
+          try {
+            const localInfo = execFileSync('docker', ['image', 'inspect', 'fosenutvikling/gamepanel:latest', '--format', '{{index .RepoDigests 0}}'], {
+              timeout: 5000,
+            }).toString().trim();
+            const localDigest = localInfo.split('@')[1] || '';
+            updateAvailable = !!remoteDigest && localDigest !== remoteDigest;
+          } catch {
+            updateAvailable = true; // Can't check local = assume update available
+          }
         }
       }
     } catch { /* skip if offline */ }
@@ -55,7 +72,6 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     return {
       data: {
         current: VERSION,
-        latest,
         updateAvailable,
         updateCommand: 'cd /opt/gamepanel && docker compose pull && docker compose up -d',
       },
