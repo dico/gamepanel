@@ -21,6 +21,8 @@ import './components/confirm-dialog.js';
 @customElement('app-shell')
 export class AppShell extends LitElement {
   static styles = [sharedStyles, css`
+    *, *::before, *::after { box-sizing: border-box; }
+
     :host {
       display: flex;
       flex-direction: column;
@@ -91,22 +93,55 @@ export class AppShell extends LitElement {
       overflow-x: hidden;
     }
 
-    /* Mobile */
+    .hamburger {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 22px;
+      padding: 4px;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: var(--nav-height);
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 0;
+      z-index: 99;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .mobile-menu.open { display: block; }
+    .mobile-menu a {
+      display: block;
+      padding: 12px 24px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+    .mobile-menu a:hover { background: var(--bg-hover); }
+    .mobile-menu a.active { color: var(--accent); }
+
+    /* Tablet */
     @media (max-width: 768px) {
-      nav {
-        padding: 0 12px;
-        height: 48px;
-      }
+      nav { padding: 0 12px; height: 48px; }
+      :host { --nav-height: 48px; }
       .nav-left { gap: 12px; }
       .brand { font-size: 16px; }
       .nav-links a { padding: 4px 8px; font-size: 13px; }
       .nav-right { gap: 8px; }
-      .nav-right a { display: none; } /* hide username on mobile */
+      .nav-right a { display: none; }
       main { padding: 12px; }
     }
 
-    @media (max-width: 480px) {
-      .nav-links { display: none; } /* use hamburger later */
+    /* Mobile */
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hamburger { display: block; }
       .nav-right { gap: 6px; }
     }
   `];
@@ -114,6 +149,7 @@ export class AppShell extends LitElement {
   @state() private user: User | null = null;
   @state() private currentPage: string = 'dashboard';
   @state() private pageParams: Record<string, string> = {};
+  @state() private mobileMenuOpen = false;
 
   connectedCallback() {
     super.connectedCallback();
@@ -166,14 +202,22 @@ export class AppShell extends LitElement {
     }
 
     const path = location.pathname;
+    const navItems = [
+      { href: '/servers', label: 'Servers', active: path === '/' || path === '/servers' },
+      { href: '/nodes', label: 'Nodes', active: path === '/nodes' },
+      { href: '/settings', label: 'Settings', active: path === '/settings' },
+      { href: '/profile', label: 'Profile', active: path === '/profile' },
+    ];
+
     return html`
       <nav>
         <div class="nav-left">
-          <a href="/" class="brand">GamePanel</a>
+          <button class="hamburger" @click=${() => this.mobileMenuOpen = !this.mobileMenuOpen}>&#9776;</button>
+          <a href="/" class="brand" @click=${() => this.mobileMenuOpen = false}>GamePanel</a>
           <div class="nav-links">
-            <a href="/servers" class=${path === '/' || path === '/servers' ? 'active' : ''}>Servers</a>
-            <a href="/nodes" class=${path === '/nodes' ? 'active' : ''}>Nodes</a>
-            <a href="/settings" class=${path === '/settings' ? 'active' : ''}>Settings</a>
+            ${navItems.slice(0, 3).map(n => html`
+              <a href=${n.href} class=${n.active ? 'active' : ''}>${n.label}</a>
+            `)}
           </div>
         </div>
         <div class="nav-right">
@@ -183,7 +227,16 @@ export class AppShell extends LitElement {
           <button class="btn btn-sm" @click=${this.handleLogout}>Logout</button>
         </div>
       </nav>
-      <main>${this.renderPage()}</main>
+
+      <div class="mobile-menu ${this.mobileMenuOpen ? 'open' : ''}">
+        ${navItems.map(n => html`
+          <a href=${n.href} class=${n.active ? 'active' : ''}
+            @click=${() => this.mobileMenuOpen = false}>${n.label}</a>
+        `)}
+        <a href="#" @click=${(e: Event) => { e.preventDefault(); this.mobileMenuOpen = false; this.handleLogout(); }}>Logout</a>
+      </div>
+
+      <main @click=${() => this.mobileMenuOpen = false}>${this.renderPage()}</main>
       <toast-container></toast-container>
       <confirm-dialog></confirm-dialog>
     `;

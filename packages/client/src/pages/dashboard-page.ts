@@ -13,13 +13,15 @@ import { confirm } from '../components/confirm-dialog.js';
 @customElement('dashboard-page')
 export class DashboardPage extends LitElement {
   static styles = [sharedStyles, css`
-    :host { display: block; }
+    :host { display: block; overflow: hidden; }
 
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 24px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     .server-list {
@@ -35,9 +37,10 @@ export class DashboardPage extends LitElement {
       background: var(--bg-secondary);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 12px 20px;
+      padding: 12px 16px;
       cursor: pointer;
       transition: all 0.15s;
+      overflow: hidden;
     }
     .server-card:hover {
       border-color: var(--accent);
@@ -85,10 +88,11 @@ export class DashboardPage extends LitElement {
         padding: 12px;
         gap: 8px;
       }
-      .server-info { min-width: calc(100% - 52px); }
+      .server-info { min-width: 0; flex-basis: calc(100% - 52px); }
       .server-meta { flex-wrap: wrap; gap: 6px; }
       .server-stats { width: 100%; }
-      .server-actions { width: 100%; justify-content: flex-end; }
+      .server-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+      .header { gap: 8px; }
     }
   `];
 

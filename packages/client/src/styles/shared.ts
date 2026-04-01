@@ -10,6 +10,7 @@ import { css } from 'lit';
  */
 export const sharedStyles = css`
   /* ===== Reset ===== */
+  *, *::before, *::after { box-sizing: border-box; }
   a { text-decoration: none; color: inherit; }
 
   /* ===== Typography ===== */
