@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { existsSync, readdirSync, statSync, cpSync, mkdirSync, createWriteStream } from 'fs';
+import { existsSync, readdirSync, statSync, cpSync, mkdirSync, createWriteStream, readFileSync, writeFileSync } from 'fs';
 import { join, basename } from 'path';
 import { execSync } from 'child_process';
 import { pipeline } from 'stream/promises';
@@ -168,6 +168,9 @@ export async function importRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(500).send({ error: 'ImportError', message: `Failed to copy files: ${err.message}` });
     }
 
+    // Update config files with allocated ports (e.g. server.properties for Minecraft)
+    updateImportedConfigPorts(serverDataDir, ports, template);
+
     // Create server record
     const server = serverRepo.create({
       id: serverId,
@@ -182,6 +185,29 @@ export async function importRoutes(app: FastifyInstance): Promise<void> {
 
     return reply.status(201).send({ data: server });
   });
+}
+
+/**
+ * Update config files in imported server data to use allocated ports.
+ * For example, Minecraft's server.properties has a server-port field.
+ */
+function updateImportedConfigPorts(
+  dataDir: string,
+  ports: PortMapping[],
+  template: GameTemplate,
+): void {
+  const gamePort = ports.find(p => p.name === 'Game') || ports[0];
+  if (!gamePort) return;
+
+  // Minecraft: update server.properties
+  const serverProps = join(dataDir, 'server.properties');
+  if (existsSync(serverProps)) {
+    try {
+      let content = readFileSync(serverProps, 'utf-8');
+      content = content.replace(/^server-port=.*/m, `server-port=${gamePort.host}`);
+      writeFileSync(serverProps, content, 'utf-8');
+    } catch { /* skip if can't update */ }
+  }
 }
 
 function detectGameType(files: string[]): string | null {
