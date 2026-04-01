@@ -45,7 +45,7 @@ async function syncAll(): Promise<void> {
       await docker.ping();
       if (node.status !== 'online') {
         nodeRepo.updateStatus(node.id, 'online');
-        eventBus.emit('ws:broadcast', { type: 'node:status', nodeId: node.id, status: 'online' });
+        eventBus.broadcastWs({ type: 'node:status', nodeId: node.id, status: 'online' });
       }
 
       // Broadcast node resources
@@ -69,7 +69,7 @@ async function syncAll(): Promise<void> {
           resources.diskTotal = resources.diskUsed * 3; // Rough estimate
         } catch { /* skip */ }
 
-        eventBus.emit('ws:broadcast', {
+        eventBus.broadcastWs({
           type: 'node:resources',
           nodeId: node.id,
           resources,
@@ -78,7 +78,7 @@ async function syncAll(): Promise<void> {
     } catch {
       if (node.status !== 'offline') {
         nodeRepo.updateStatus(node.id, 'offline');
-        eventBus.emit('ws:broadcast', { type: 'node:status', nodeId: node.id, status: 'offline' });
+        eventBus.broadcastWs({ type: 'node:status', nodeId: node.id, status: 'offline' });
       }
     }
   }
@@ -104,7 +104,7 @@ async function syncAll(): Promise<void> {
 
       if (actualStatus !== server.status) {
         serverRepo.updateStatus(server.id, actualStatus);
-        eventBus.emit('ws:broadcast', {
+        eventBus.broadcastWs({
           type: 'server:status',
           serverId: server.id,
           nodeId: server.nodeId,
@@ -124,7 +124,7 @@ async function syncAll(): Promise<void> {
 
           const cpuRounded = Math.round(cpuPercent * 10) / 10;
           cachedServerStats.set(server.id, { cpu: cpuRounded, memory: memoryUsage });
-          eventBus.emit('ws:broadcast', {
+          eventBus.broadcastWs({
             type: 'server:stats',
             serverId: server.id,
             cpu: cpuRounded,
@@ -138,7 +138,7 @@ async function syncAll(): Promise<void> {
       // Container might have been removed externally
       if (server.status !== 'error') {
         serverRepo.updateStatus(server.id, 'error');
-        eventBus.emit('ws:broadcast', {
+        eventBus.broadcastWs({
           type: 'server:status',
           serverId: server.id,
           nodeId: server.nodeId,

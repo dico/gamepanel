@@ -108,7 +108,7 @@ export async function consoleWsRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Handle incoming commands
-    socket.on('message', async (data) => {
+    socket.on('message', async (data: Buffer | string) => {
       const msg = data.toString();
       try {
         const parsed = JSON.parse(msg);

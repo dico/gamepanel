@@ -56,15 +56,15 @@ export async function serverRoutes(app: FastifyInstance): Promise<void> {
     }
 
     // Auto-allocate ports if not explicitly provided
-    const ports = request.body.ports ?? await findAvailablePorts(
+    const ports: PortMapping[] = request.body.ports ?? await findAvailablePorts(
       template.ports.map(p => ({
         name: p.name,
         defaultHost: p.defaultHost,
         container: p.container,
-        protocol: p.protocol,
+        protocol: p.protocol as 'tcp' | 'udp',
       })),
       nodeId,
-    );
+    ) as PortMapping[];
 
     // Merge template default env with user overrides
     const defaultEnv: Record<string, string> = {};

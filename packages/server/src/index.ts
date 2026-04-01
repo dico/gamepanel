@@ -66,10 +66,10 @@ async function main() {
     join(__dirname, '..', '..', 'client', 'dist'),
     join(__dirname, '..', 'public'),
   ];
-  const staticDir = possiblePaths.find(p => existsSync(join(p, 'index.html'))) ?? null;
+  const staticDir = possiblePaths.find(p => existsSync(join(p, 'index.html')));
   console.log(`Static dir: ${staticDir ?? 'none (using fallback HTML)'}`);
 
-  if (existsSync(staticDir)) {
+  if (staticDir) {
     await app.register(fastifyStatic, {
       root: staticDir,
       prefix: '/',
@@ -107,7 +107,7 @@ async function main() {
       return reply.status(404).send({ error: 'NotFound', message: `Route ${request.method}:${request.url} not found` });
     }
 
-    if (existsSync(staticDir)) {
+    if (staticDir) {
       return reply.sendFile('index.html');
     }
 

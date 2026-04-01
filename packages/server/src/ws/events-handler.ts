@@ -6,7 +6,7 @@ const clients = new Set<WebSocket>();
 
 export async function eventsWsRoutes(app: FastifyInstance): Promise<void> {
   // Listen to event bus and broadcast to all connected clients
-  eventBus.on('ws:broadcast', (data) => {
+  eventBus.onWsBroadcast((data) => {
     const msg = JSON.stringify(data);
     for (const ws of clients) {
       if (ws.readyState === 1) {

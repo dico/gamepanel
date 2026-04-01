@@ -22,7 +22,7 @@ export const dockerManager = {
     }
 
     serverRepo.updateStatus(server.id, 'creating');
-    eventBus.emit('ws:broadcast', { type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'creating' });
+    eventBus.broadcastWs({ type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'creating' });
 
     // Pull image if not present
     try {
@@ -49,7 +49,7 @@ export const dockerManager = {
     // Start container
     await container.start();
     serverRepo.updateStatus(server.id, 'running', containerId);
-    eventBus.emit('ws:broadcast', { type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'running' });
+    eventBus.broadcastWs({ type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'running' });
 
     return containerId;
   },
@@ -62,7 +62,7 @@ export const dockerManager = {
     await container.start();
 
     serverRepo.updateStatus(server.id, 'running');
-    eventBus.emit('ws:broadcast', { type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'running' });
+    eventBus.broadcastWs({ type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'running' });
   },
 
   async stop(server: Server): Promise<void> {
@@ -74,7 +74,7 @@ export const dockerManager = {
 
     await container.stop({ t: template?.docker.stopTimeout ?? 10 });
     serverRepo.updateStatus(server.id, 'stopped');
-    eventBus.emit('ws:broadcast', { type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'stopped' });
+    eventBus.broadcastWs({ type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'stopped' });
   },
 
   async restart(server: Server): Promise<void> {

@@ -2,14 +2,12 @@ import { EventEmitter } from 'events';
 import type { WsEvent } from '@gamepanel/shared';
 
 class GamePanelEventBus extends EventEmitter {
-  emit(event: 'ws:broadcast', data: WsEvent): boolean;
-  emit(event: string, ...args: unknown[]): boolean {
-    return super.emit(event, ...args);
+  broadcastWs(data: WsEvent): boolean {
+    return this.emit('ws:broadcast', data);
   }
 
-  on(event: 'ws:broadcast', listener: (data: WsEvent) => void): this;
-  on(event: string, listener: (...args: unknown[]) => void): this {
-    return super.on(event, listener);
+  onWsBroadcast(listener: (data: WsEvent) => void): this {
+    return this.on('ws:broadcast', listener);
   }
 }
 

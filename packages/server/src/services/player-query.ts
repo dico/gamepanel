@@ -73,7 +73,7 @@ async function queryAll(): Promise<void> {
 
       // Cache and broadcast player info via WebSocket
       getCachedPlayerCounts().set(server.id, { online, max, players });
-      eventBus.emit('ws:broadcast', {
+      eventBus.broadcastWs({
         type: 'server:players',
         serverId: server.id,
         online,

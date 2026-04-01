@@ -6,9 +6,9 @@
 
 ## Why?
 
-Existing game server panels (AMP, Pterodactyl, etc.) are **over-engineered nightmares**. Three levels of navigation, hundreds of settings nobody uses, and UIs that feel like they were designed by a committee of sysadmins.
+Existing game server panels like AMP and Pterodactyl are **powerful tools built by talented developers** — but they're designed for hosting providers and power users. For someone who just wants to run a Minecraft server at home or set up a few game servers for a LAN party, they can feel overwhelming with dozens of settings and deep navigation.
 
-We needed something simple: spin up a Minecraft server for a LAN party, manage it from a browser, and not need a PhD to do it.
+We wanted something simpler. Something you can install in one command and figure out in five minutes.
 
 **GamePanel shows you what you need 90% of the time.** Advanced settings are one click away, but never in the way.
 
