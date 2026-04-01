@@ -26,6 +26,8 @@ export class CreateServerDialog extends LitElement {
       max-width: 500px;
       max-height: 80vh;
       overflow-y: auto;
+      margin: 16px;
+      box-sizing: border-box;
     }
 
     input, select { margin-bottom: 16px; }

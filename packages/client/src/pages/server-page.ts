@@ -116,7 +116,17 @@ export class ServerPage extends LitElement {
     .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
     .info-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
     .info-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
-    .info-value { font-family: var(--font-mono); font-size: 14px; }
+    .info-value { font-family: var(--font-mono); font-size: 14px; word-break: break-all; }
+
+    @media (max-width: 768px) {
+      .header { flex-direction: column; align-items: flex-start; gap: 8px; }
+      .connect-box { flex-direction: column; align-items: flex-start; }
+      .connect-addr { font-size: 13px; }
+      .actions { flex-wrap: wrap; }
+      .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .tab { padding: 8px 12px; font-size: 13px; white-space: nowrap; }
+      .info-grid { grid-template-columns: 1fr; }
+    }
   `];
 
   @property() serverId = '';

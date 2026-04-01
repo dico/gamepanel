@@ -90,6 +90,25 @@ export class AppShell extends LitElement {
       width: 100%;
       overflow-x: hidden;
     }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      nav {
+        padding: 0 12px;
+        height: 48px;
+      }
+      .nav-left { gap: 12px; }
+      .brand { font-size: 16px; }
+      .nav-links a { padding: 4px 8px; font-size: 13px; }
+      .nav-right { gap: 8px; }
+      .nav-right a { display: none; } /* hide username on mobile */
+      main { padding: 12px; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-links { display: none; } /* use hamburger later */
+      .nav-right { gap: 6px; }
+    }
   `];
 
   @state() private user: User | null = null;

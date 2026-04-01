@@ -203,4 +203,14 @@ export const sharedStyles = css`
     padding: 48px 32px;
     color: var(--text-muted);
   }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    h1 { font-size: 20px; }
+    h2 { font-size: 18px; }
+    .btn { padding: 6px 12px; font-size: 12px; }
+    .btn-lg { padding: 8px 16px; font-size: 13px; }
+    .empty { padding: 32px 16px; }
+  }
 `;
+

@@ -78,6 +78,18 @@ export class DashboardPage extends LitElement {
     .server-stats .stat-label { color: var(--text-muted); }
 
     .server-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    @media (max-width: 768px) {
+      .server-card {
+        flex-wrap: wrap;
+        padding: 12px;
+        gap: 8px;
+      }
+      .server-info { min-width: calc(100% - 52px); }
+      .server-meta { flex-wrap: wrap; gap: 6px; }
+      .server-stats { width: 100%; }
+      .server-actions { width: 100%; justify-content: flex-end; }
+    }
   `];
 
   @state() private servers: Server[] = [];

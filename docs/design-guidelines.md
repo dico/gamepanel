@@ -280,13 +280,32 @@ Konfigurasjonsskjemaet bygges dynamisk fra template JSON:
 
 ## Responsivitet
 
-Panelet skal fungere pa:
-- **Desktop (primaer):** Full layout med navbar + innhold
-- **Tablet:** Kollapset navigasjon, men full funksjonalitet
-- **Mobil:** Grunnleggende oversikt og start/stopp
+Applikasjonen er responsiv med breakpoints pa 768px (tablet) og 480px (mobil).
 
-Grid bruker CSS Grid med `auto-fill, minmax()` for automatisk responsivitet
-uten media queries.
+### Breakpoints
+
+| Bredde | Enhet | Tilpasninger |
+|--------|-------|-------------|
+| >768px | Desktop | Full layout, alle kolonner synlige |
+| 480-768px | Tablet | Server-cards wrapper, skjuler filstorrelse/dato, scrollbare tabs |
+| <480px | Mobil | Nav-linker skjules, kompakt layout |
+
+### Responsiv-regler per komponent
+
+- **Navbar:** Redusert padding og gap. Nav-linker skjules pa sma skjermer.
+- **Dashboard:** Server-cards wrapper til stabling. Stats og actions tar full bredde.
+- **Server-side:** Header stables vertikalt. Tabs er horisontalt scrollbare. Connect-boks stables.
+- **Konsoll:** Redusert hoyde (300px), mindre font.
+- **Filbehandler:** Kolonnene storrelse og dato skjules. Toolbar wrapper.
+- **Config-form:** Grid kollapser til 1 kolonne automatisk via `minmax(280px, 1fr)`.
+- **Dialoger/modaler:** Margin pa 16px for a unnga kanter pa mobil.
+- **Login:** Kort far margin slik at det ikke kleber til kantene.
+
+### Implementasjon
+
+Responsive styles legges i komponentens `static styles` med `@media` queries.
+Felles responsive regler (h1/h2/button storrelse) er i `shared.ts`.
+Grid bruker `auto-fill, minmax()` for automatisk kolonne-tilpasning.
 
 ---
 

@@ -83,6 +83,13 @@ export class FileManager extends LitElement {
     }
     .file-row.header:hover { background: var(--bg-secondary); }
 
+    @media (max-width: 768px) {
+      .file-row { grid-template-columns: 1fr auto; }
+      .file-size, .file-modified { display: none; }
+      .file-row.header { display: none; }
+      .toolbar { flex-wrap: wrap; }
+    }
+
     .file-name {
       display: flex;
       align-items: center;

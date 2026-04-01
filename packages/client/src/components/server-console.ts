@@ -66,6 +66,12 @@ export class ServerConsole extends LitElement {
       cursor: pointer;
     }
     .quick-cmd:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
+    @media (max-width: 768px) {
+      .console-output { height: 300px; font-size: 12px; }
+      .console-input input { font-size: 12px; }
+      .quick-cmd { font-size: 10px; padding: 2px 8px; }
+    }
   `];
 
   @property() serverId = '';

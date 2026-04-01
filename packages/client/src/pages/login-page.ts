@@ -19,6 +19,7 @@ export class LoginPage extends LitElement {
       border: 1px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 40px;
+      margin: 16px;
       width: 100%;
       max-width: 380px;
     }
