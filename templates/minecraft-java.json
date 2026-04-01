@@ -113,6 +113,56 @@
           "group": "gameplay"
         },
         {
+          "key": "hardcore",
+          "label": "Hardcore",
+          "type": "boolean",
+          "default": false,
+          "group": "gameplay"
+        },
+        {
+          "key": "allow-flight",
+          "label": "Allow Flight",
+          "type": "boolean",
+          "default": false,
+          "group": "gameplay",
+          "description": "Required for some mods and plugins"
+        },
+        {
+          "key": "spawn-protection",
+          "label": "Spawn Protection Radius",
+          "type": "number",
+          "default": 16,
+          "group": "gameplay",
+          "validation": { "min": 0, "max": 100 },
+          "description": "0 to disable"
+        },
+        {
+          "key": "view-distance",
+          "label": "View Distance",
+          "type": "number",
+          "default": 10,
+          "group": "performance",
+          "validation": { "min": 3, "max": 32 },
+          "description": "Chunks. Lower = better performance"
+        },
+        {
+          "key": "simulation-distance",
+          "label": "Simulation Distance",
+          "type": "number",
+          "default": 10,
+          "group": "performance",
+          "validation": { "min": 3, "max": 32 },
+          "description": "Chunks. Lower = better performance"
+        },
+        {
+          "key": "level-seed",
+          "label": "World Seed",
+          "type": "string",
+          "default": "",
+          "group": "general",
+          "description": "Leave empty for random. Only applies when generating a new world"
+        },
+        {
           "key": "max-players",
           "label": "Max Players",
           "type": "number",
