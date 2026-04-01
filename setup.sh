@@ -24,6 +24,21 @@ log()  { echo -e "${GREEN}[GamePanel]${NC} $1"; }
 warn() { echo -e "${YELLOW}[Warning]${NC} $1"; }
 err()  { echo -e "${RED}[Error]${NC} $1"; exit 1; }
 
+# Read from terminal even when piped via curl | bash
+prompt() {
+  local var="$1" msg="$2" default="${3:-}"
+  read -p "$msg" "$var" </dev/tty
+  if [[ -z "${!var}" && -n "$default" ]]; then
+    eval "$var='$default'"
+  fi
+}
+
+prompt_secret() {
+  local var="$1" msg="$2"
+  read -sp "$msg" "$var" </dev/tty
+  echo "" >/dev/tty
+}
+
 # =============================================
 # Install Docker if missing
 # =============================================
@@ -39,9 +54,8 @@ install_docker() {
   apt-get install -y -qq ca-certificates curl
   install -m 0755 -d /etc/apt/keyrings
 
-  local distro
+  local distro codename
   distro=$(. /etc/os-release && echo "$ID")
-  local codename
   codename=$(. /etc/os-release && echo "$VERSION_CODENAME")
 
   curl -fsSL "https://download.docker.com/linux/$distro/gpg" -o /etc/apt/keyrings/docker.asc
@@ -88,8 +102,7 @@ echo -e "Select installation mode:"
 echo -e "  ${GREEN}1)${NC} Full install (panel + local node)"
 echo -e "  ${GREEN}2)${NC} Node only (add to existing panel)"
 echo ""
-read -p "Choice [1]: " MODE
-MODE=${MODE:-1}
+prompt MODE "Choice [1]: " "1"
 
 if [[ "$MODE" == "2" ]]; then
   log "Node-only setup"
@@ -103,10 +116,10 @@ if [[ "$MODE" == "2" ]]; then
 fi
 
 # =============================================
-# Standalone installation
+# Full installation
 # =============================================
 
-log "Starting standalone installation..."
+log "Starting full installation..."
 install_docker
 
 # --- Get server IP ---
@@ -115,20 +128,17 @@ SERVER_IP=$(hostname -I | awk '{print $1}')
 # --- Admin credentials ---
 echo ""
 echo -e "${BLUE}Configure admin account:${NC}"
-read -p "  Admin username [admin]: " ADMIN_USER
-ADMIN_USER=${ADMIN_USER:-admin}
+prompt ADMIN_USER "  Admin username [admin]: " "admin"
 
 while true; do
-  read -sp "  Admin password (min 8 characters): " ADMIN_PASS
-  echo ""
+  prompt_secret ADMIN_PASS "  Admin password (min 8 characters): "
   if [[ ${#ADMIN_PASS} -ge 8 ]]; then
     break
   fi
   warn "Password must be at least 8 characters"
 done
 
-read -p "  Panel port [3000]: " PANEL_PORT
-PANEL_PORT=${PANEL_PORT:-3000}
+prompt PANEL_PORT "  Panel port [3000]: " "3000"
 
 # --- Create directories ---
 log "Setting up directories..."
@@ -143,7 +153,6 @@ for file in minecraft-java.json cs2.json; do
     -o "$GAMEPANEL_DIR/templates/$file" 2>/dev/null || warn "Failed to download $file"
 done
 
-# Download template images/icons
 mkdir -p "$GAMEPANEL_DIR/templates/images" "$GAMEPANEL_DIR/templates/icons"
 for file in minecraft-java.jpg cs2.jpg; do
   curl -fsSL "https://raw.githubusercontent.com/dico/gamepanel/main/templates/images/$file" \
@@ -156,28 +165,28 @@ done
 
 # --- Create docker-compose.yml ---
 log "Creating Docker Compose configuration..."
-cat > "$COMPOSE_FILE" <<EOF
+cat > "$COMPOSE_FILE" <<YAML
 services:
   gamepanel:
-    image: $DOCKER_IMAGE
+    image: ${DOCKER_IMAGE}
     container_name: gamepanel
     restart: unless-stopped
     ports:
-      - "$PANEL_PORT:3000"
+      - "${PANEL_PORT}:3000"
     volumes:
       - ./data:/app/data
       - ./templates:/app/templates
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - NODE_ENV=production
-      - GAMEPANEL_PORT=3000
-      - ADMIN_USERNAME=$ADMIN_USER
-      - ADMIN_PASSWORD=$ADMIN_PASS
-      - DATA_DIR=/app/data
-      - HOST_DATA_DIR=$GAMEPANEL_DIR/data
-      - TEMPLATES_DIR=/app/templates
-      - QUERY_HOST=$SERVER_IP
-EOF
+      NODE_ENV: production
+      GAMEPANEL_PORT: "3000"
+      ADMIN_USERNAME: "${ADMIN_USER}"
+      ADMIN_PASSWORD: "${ADMIN_PASS}"
+      DATA_DIR: /app/data
+      HOST_DATA_DIR: ${GAMEPANEL_DIR}/data
+      TEMPLATES_DIR: /app/templates
+      QUERY_HOST: "${SERVER_IP}"
+YAML
 
 # --- Pull and start ---
 log "Pulling GamePanel image..."
@@ -199,10 +208,10 @@ if docker ps --format '{{.Names}}' | grep -q gamepanel; then
   echo -e "  URL:       ${BLUE}http://${SERVER_IP}:${PANEL_PORT}${NC}"
   echo -e "  Username:  ${BLUE}${ADMIN_USER}${NC}"
   echo ""
-  echo -e "  Directory: ${YELLOW}$GAMEPANEL_DIR${NC}"
+  echo -e "  Directory: ${YELLOW}${GAMEPANEL_DIR}${NC}"
   echo -e "  Logs:      ${YELLOW}docker logs -f gamepanel${NC}"
-  echo -e "  Stop:      ${YELLOW}cd $GAMEPANEL_DIR && docker compose down${NC}"
-  echo -e "  Update:    ${YELLOW}cd $GAMEPANEL_DIR && docker compose pull && docker compose up -d${NC}"
+  echo -e "  Stop:      ${YELLOW}cd ${GAMEPANEL_DIR} && docker compose down${NC}"
+  echo -e "  Update:    ${YELLOW}cd ${GAMEPANEL_DIR} && docker compose pull && docker compose up -d${NC}"
   echo ""
 else
   echo ""
