@@ -23,7 +23,7 @@ services:
       - ADMIN_USERNAME=admin
       - ADMIN_PASSWORD=changeme
       - DATA_DIR=/app/data
-      - HOST_DATA_DIR=${HOST_DATA_DIR:-./data}
+      - HOST_DATA_DIR=${HOST_DATA_DIR:-/opt/gamepanel/data}
       - TEMPLATES_DIR=/app/templates
       - QUERY_HOST=${QUERY_HOST:-host.docker.internal}
     restart: unless-stopped
