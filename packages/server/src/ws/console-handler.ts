@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { serverRepo } from '../db/repositories/server-repo.js';
+import { sessionRepo } from '../db/repositories/session-repo.js';
+import { userRepo } from '../db/repositories/user-repo.js';
 import { getDocker } from '../docker/node-pool.js';
 import type { WebSocket } from '@fastify/websocket';
 
@@ -66,6 +68,14 @@ const activeConnections = new Map<string, Set<WebSocket>>();
 
 export async function consoleWsRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { id: string } }>('/ws/servers/:id/console', { websocket: true }, (socket, request) => {
+    // Authenticate via session cookie
+    const sessionId = request.cookies?.session;
+    if (!sessionId) { socket.close(4001, 'Unauthorized'); return; }
+    const session = sessionRepo.findById(sessionId);
+    if (!session) { socket.close(4001, 'Session expired'); return; }
+    const user = userRepo.findById(session.user_id);
+    if (!user) { socket.close(4001, 'User not found'); return; }
+
     const serverId = request.params.id;
     const server = serverRepo.findById(serverId);
 

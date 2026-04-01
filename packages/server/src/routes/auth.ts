@@ -17,11 +17,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     const user = userRepo.findByUsername(username);
     if (!user) {
+      auditRepo.log(null, 'auth:login_failed', undefined, { username, reason: 'user_not_found' }, request.ip);
       return reply.status(401).send({ error: 'Unauthorized', message: 'Invalid credentials' });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      auditRepo.log(user.id, 'auth:login_failed', undefined, { reason: 'wrong_password' }, request.ip);
       return reply.status(401).send({ error: 'Unauthorized', message: 'Invalid credentials' });
     }
 
@@ -34,11 +36,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
     reply.setCookie('session', sessionId, {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'strict',
       path: '/',
       maxAge: config.sessionMaxAge / 1000,
-      // Only require HTTPS if explicitly configured (most home setups use HTTP)
-      secure: false,
+      secure: process.env.SECURE_COOKIES === 'true',
     });
 
     return { data: { id: user.id, username: user.username, role: user.role, displayName: user.displayName } };

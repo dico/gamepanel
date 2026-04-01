@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/role.js';
 import { auditRepo } from '../db/repositories/audit-repo.js';
@@ -68,7 +68,7 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     try {
       // Pull latest image
-      const pullOutput = execSync('docker pull fosenutvikling/gamepanel:latest 2>&1', {
+      const pullOutput = execFileSync('docker', ['pull', 'fosenutvikling/gamepanel:latest'], {
         timeout: 120_000,
       }).toString();
 
@@ -81,10 +81,8 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
       // Schedule restart — respond first, then restart
       setTimeout(() => {
         try {
-          execSync('docker compose pull && docker compose up -d', {
-            cwd: '/opt/gamepanel',
-            timeout: 120_000,
-          });
+          execFileSync('docker', ['compose', 'pull'], { cwd: '/opt/gamepanel', timeout: 120_000 });
+          execFileSync('docker', ['compose', 'up', '-d'], { cwd: '/opt/gamepanel', timeout: 120_000 });
         } catch { /* container will restart anyway */ }
       }, 1000);
 

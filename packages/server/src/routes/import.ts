@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { existsSync, readdirSync, statSync, cpSync, mkdirSync, createWriteStream, readFileSync, writeFileSync } from 'fs';
 import { join, basename } from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { pipeline } from 'stream/promises';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/role.js';
@@ -81,9 +81,9 @@ export async function importRoutes(app: FastifyInstance): Promise<void> {
     // Extract
     try {
       if (isZip) {
-        execSync(`unzip -o "${tempFile}" -d "${extractDir}"`, { timeout: 300_000 });
+        execFileSync('unzip', ['-o', tempFile, '-d', extractDir], { timeout: 300_000 });
       } else {
-        execSync(`tar -xzf "${tempFile}" -C "${extractDir}"`, { timeout: 300_000 });
+        execFileSync('tar', ['-xzf', tempFile, '-C', extractDir], { timeout: 300_000 });
       }
 
       // Clean up archive
@@ -115,7 +115,15 @@ export async function importRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(400).send({ error: 'BadRequest', message: 'sourcePath, name, and templateSlug are required' });
     }
 
-    if (!existsSync(sourcePath)) {
+    // Restrict sourcePath to import directory to prevent path traversal
+    const importDir = process.env.IMPORT_DIR || IMPORT_DIR;
+    const { resolve } = await import('path');
+    const resolvedSource = resolve(sourcePath);
+    if (!resolvedSource.startsWith(resolve(importDir))) {
+      return reply.status(400).send({ error: 'BadRequest', message: 'Source path must be within the import directory' });
+    }
+
+    if (!existsSync(resolvedSource)) {
       return reply.status(400).send({ error: 'BadRequest', message: 'Source path does not exist' });
     }
 

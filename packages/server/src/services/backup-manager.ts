@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { existsSync, mkdirSync, statSync, unlinkSync } from 'fs';
 import { join, basename } from 'path';
 import { nanoid } from 'nanoid';
@@ -31,7 +31,7 @@ export const backupManager = {
     const filePath = join(getBackupDir(), fileName);
 
     // Create tar.gz of server data directory
-    execSync(`tar -czf "${filePath}" -C "${dataDir}" .`, { timeout: 300_000 });
+    execFileSync('tar', ['-czf', filePath, '-C', dataDir, '.'], { timeout: 300_000 });
 
     const stat = statSync(filePath);
 
@@ -63,7 +63,7 @@ export const backupManager = {
     if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
 
     // Extract tar.gz over server data directory
-    execSync(`tar -xzf "${filePath}" -C "${dataDir}"`, { timeout: 300_000 });
+    execFileSync('tar', ['-xzf', filePath, '-C', dataDir], { timeout: 300_000 });
   },
 
   async remove(backupId: string): Promise<void> {

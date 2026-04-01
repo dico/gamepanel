@@ -100,6 +100,13 @@ async function main() {
   await app.register(consoleWsRoutes);
   await app.register(eventsWsRoutes);
 
+  // Security headers
+  app.addHook('onSend', async (_request, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  });
+
   // Health check
   app.get('/api/health', async () => {
     return { status: 'ok', version: VERSION };
