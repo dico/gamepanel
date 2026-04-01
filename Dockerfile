@@ -44,6 +44,9 @@ COPY --from=builder /app/packages/server/dist packages/server/dist
 COPY --from=builder /app/packages/client/dist packages/client/dist
 COPY --from=builder /app/tsconfig.base.json ./
 
+# Copy SQL migrations (not included in tsc output)
+COPY packages/server/src/db/migrations/ packages/server/dist/db/migrations/
+
 # Copy templates
 COPY templates/ templates/
 
