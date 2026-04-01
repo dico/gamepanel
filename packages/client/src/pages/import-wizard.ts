@@ -139,6 +139,7 @@ export class ImportWizard extends LitElement {
   `];
 
   @state() private step = 1;
+  @state() private error = '';
   @state() private method: 'folder' | 'upload' | null = null;
   @state() private folders: ImportEntry[] = [];
   @state() private importDir = '';
@@ -188,6 +189,7 @@ export class ImportWizard extends LitElement {
 
     this.uploading = true;
     this.uploadProgress = 0;
+    this.error = '';
 
     const formData = new FormData();
     formData.append('file', file);
@@ -230,7 +232,7 @@ export class ImportWizard extends LitElement {
       showToast('File uploaded and extracted', 'success');
       this.step = 2;
     } catch (err: any) {
-      showToast(err.message || 'Upload failed', 'error', 10000);
+      this.error = err.message || 'Upload failed';
     } finally {
       this.uploading = false;
     }
@@ -264,7 +266,7 @@ export class ImportWizard extends LitElement {
       showToast('Server imported successfully!', 'success');
       navigate(`/servers/${res.data.id}`);
     } catch (err: any) {
-      showToast(err.body?.message || 'Import failed', 'error');
+      this.error = err.body?.message || 'Import failed';
     } finally {
       this.importing = false;
     }
@@ -289,6 +291,13 @@ export class ImportWizard extends LitElement {
           </div>
         `)}
       </div>
+
+      ${this.error ? html`
+        <div class="status-error" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+          <span>${this.error}</span>
+          <button class="btn btn-sm" style="margin-left:12px;flex-shrink:0" @click=${() => this.error = ''}>Dismiss</button>
+        </div>
+      ` : ''}
 
       ${this.step === 1 ? this.renderStep1() : ''}
       ${this.step === 2 ? this.renderStep2() : ''}

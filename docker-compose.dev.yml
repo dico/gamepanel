@@ -13,6 +13,8 @@ services:
       - ./templates:/app/templates
       # Persist SQLite database and server data
       - ./data:/app/data
+      # Mount import directory
+      - /opt/gamepanel/import:/opt/gamepanel/import
       # Mount Docker socket so GamePanel can manage containers
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
