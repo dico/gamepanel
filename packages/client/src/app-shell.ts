@@ -11,6 +11,7 @@ import './pages/dashboard-page.js';
 import './pages/server-page.js';
 import './pages/profile-page.js';
 import './pages/nodes-page.js';
+import './pages/settings-page.js';
 import './components/notification-panel.js';
 import './components/toast.js';
 import './components/confirm-dialog.js';
@@ -105,6 +106,7 @@ export class AppShell extends LitElement {
     route('/servers', () => { this.currentPage = 'dashboard'; });
     route('/servers/:id', (params) => { this.currentPage = 'server'; this.pageParams = params; });
     route('/nodes', () => { this.currentPage = 'nodes'; });
+    route('/settings', () => { this.currentPage = 'settings'; });
     route('/profile', () => { this.currentPage = 'profile'; });
     route('/login', () => { this.currentPage = 'login'; });
     notFound(() => { this.currentPage = 'dashboard'; });
@@ -125,6 +127,7 @@ export class AppShell extends LitElement {
       case 'login': return html`<login-page style="flex:1;display:flex"></login-page>`;
       case 'server': return html`<server-page .serverId=${this.pageParams.id}></server-page>`;
       case 'nodes': return html`<nodes-page></nodes-page>`;
+      case 'settings': return html`<settings-page></settings-page>`;
       case 'profile': return html`<profile-page></profile-page>`;
       default: return html`<dashboard-page></dashboard-page>`;
     }
@@ -143,6 +146,7 @@ export class AppShell extends LitElement {
           <div class="nav-links">
             <a href="/servers" class=${path === '/' || path === '/servers' ? 'active' : ''}>Servers</a>
             <a href="/nodes" class=${path === '/nodes' ? 'active' : ''}>Nodes</a>
+            <a href="/settings" class=${path === '/settings' ? 'active' : ''}>Settings</a>
           </div>
         </div>
         <div class="nav-right">

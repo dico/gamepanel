@@ -8,7 +8,7 @@ import bcrypt from 'bcrypt';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
-import { config } from './config.js';
+import { config, VERSION } from './config.js';
 import { initDb } from './db/index.js';
 import { userRepo } from './db/repositories/user-repo.js';
 import { nodeRepo } from './db/repositories/node-repo.js';
@@ -98,7 +98,7 @@ async function main() {
 
   // Health check
   app.get('/api/health', async () => {
-    return { status: 'ok', version: '0.1.0' };
+    return { status: 'ok', version: VERSION };
   });
 
   // SPA catch-all — serve index.html for all non-API/WS routes
