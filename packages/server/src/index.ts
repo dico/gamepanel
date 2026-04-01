@@ -20,6 +20,7 @@ import { notificationRoutes } from './routes/notifications.js';
 import { fileRoutes } from './routes/files.js';
 import { profileRoutes } from './routes/profile.js';
 import { dockerRoutes } from './routes/docker.js';
+import { importRoutes } from './routes/import.js';
 import { presetRoutes } from './routes/presets.js';
 import { userRoutes } from './routes/users.js';
 import { systemRoutes } from './routes/system.js';
@@ -86,6 +87,7 @@ async function main() {
   await app.register(fileRoutes);
   await app.register(profileRoutes);
   await app.register(dockerRoutes);
+  await app.register(importRoutes);
   await app.register(presetRoutes);
   await app.register(userRoutes);
   await app.register(systemRoutes);

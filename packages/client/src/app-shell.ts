@@ -13,6 +13,7 @@ import './pages/profile-page.js';
 import './pages/nodes-page.js';
 import './pages/settings-page.js';
 import './pages/status-page.js';
+import './pages/import-wizard.js';
 import './components/notification-panel.js';
 import './components/toast.js';
 import './components/confirm-dialog.js';
@@ -108,6 +109,7 @@ export class AppShell extends LitElement {
     route('/servers/:id', (params) => { this.currentPage = 'server'; this.pageParams = params; });
     route('/nodes', () => { this.currentPage = 'nodes'; });
     route('/settings', () => { this.currentPage = 'settings'; });
+    route('/import', () => { this.currentPage = 'import'; });
     route('/profile', () => { this.currentPage = 'profile'; });
     route('/status/:id', (params) => { this.currentPage = 'status'; this.pageParams = params; });
     route('/login', () => { this.currentPage = 'login'; });
@@ -133,6 +135,7 @@ export class AppShell extends LitElement {
       case 'server': return html`<server-page .serverId=${this.pageParams.id}></server-page>`;
       case 'nodes': return html`<nodes-page></nodes-page>`;
       case 'settings': return html`<settings-page></settings-page>`;
+      case 'import': return html`<import-wizard></import-wizard>`;
       case 'profile': return html`<profile-page></profile-page>`;
       default: return html`<dashboard-page></dashboard-page>`;
     }

@@ -67,6 +67,13 @@ export class SettingsPage extends LitElement {
       word-break: break-all;
     }
 
+    .hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
     .form-actions {
       grid-column: 1 / -1;
       display: flex;
@@ -171,51 +178,62 @@ export class SettingsPage extends LitElement {
       </div>
 
       <div class="section">
-        <div class="section-header">Network</div>
-        <div class="section-body">
-          <div class="field">
-            <label>Local hostname / IP</label>
-            <input type="text"
-              placeholder="Auto-detect"
-              .value=${this.settings.localHost || ''}
-              @input=${(e: Event) => this.setSetting('localHost', (e.target as HTMLInputElement).value)}>
-          </div>
-          <div class="field">
-            <label>External hostname / domain</label>
-            <input type="text"
-              placeholder="e.g. mc.example.com (optional)"
-              .value=${this.settings.externalHost || ''}
-              @input=${(e: Event) => this.setSetting('externalHost', (e.target as HTMLInputElement).value)}>
+        <div class="section-header">Connection Addresses</div>
+        <div class="section-body single">
+          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">
+            These addresses are shown on the server page when you use the <strong>Copy</strong> button to share your game server address with players.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+            <div class="field">
+              <label>LAN address</label>
+              <input type="text"
+                placeholder="Auto-detect (e.g. 192.168.1.100)"
+                .value=${this.settings.localHost || ''}
+                @input=${(e: Event) => this.setSetting('localHost', (e.target as HTMLInputElement).value)}>
+              <div class="hint">Used for the Copy button when playing on your local network. Leave empty to use the browser's hostname.</div>
+            </div>
+            <div class="field">
+              <label>Public address (optional)</label>
+              <input type="text"
+                placeholder="e.g. mc.example.com"
+                .value=${this.settings.externalHost || ''}
+                @input=${(e: Event) => this.setSetting('externalHost', (e.target as HTMLInputElement).value)}>
+              <div class="hint">If set, a second Copy button appears for sharing with players outside your network.</div>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="section">
-        <div class="section-header">Port Management</div>
-        <div class="section-body">
+        <div class="section-header">Port Allocation</div>
+        <div class="section-body single">
+          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">
+            Controls which ports are assigned when creating new game servers. By default, ports are assigned automatically starting from each game's default port.
+          </p>
           <div class="field">
             <div class="toggle">
               <input type="checkbox"
                 .checked=${this.settings.portRangeEnabled === 'true'}
                 @change=${(e: Event) => this.setSetting('portRangeEnabled', (e.target as HTMLInputElement).checked ? 'true' : 'false')}>
-              <label style="margin-bottom:0">Restrict to port range</label>
+              <label style="margin-bottom:0">Restrict to a specific port range</label>
             </div>
+            <div class="hint" style="margin-top:8px">Enable this if your firewall only allows certain ports. New servers will only be assigned ports within this range.</div>
           </div>
           ${this.settings.portRangeEnabled === 'true' ? html`
-            <div class="field">
+            <div class="field" style="margin-top:16px">
               <label>Allowed port range</label>
-              <div style="display:flex;gap:8px;align-items:center">
+              <div style="display:flex;gap:8px;align-items:center;max-width:400px">
                 <input type="number" placeholder="25565" style="flex:1"
                   .value=${this.settings.portRangeStart || ''}
                   @input=${(e: Event) => this.setSetting('portRangeStart', (e.target as HTMLInputElement).value)}>
-                <span style="color:var(--text-muted)">—</span>
+                <span style="color:var(--text-muted)">to</span>
                 <input type="number" placeholder="25600" style="flex:1"
                   .value=${this.settings.portRangeEnd || ''}
                   @input=${(e: Event) => this.setSetting('portRangeEnd', (e.target as HTMLInputElement).value)}>
               </div>
             </div>
           ` : ''}
-          <div class="form-actions">
+          <div class="form-actions" style="margin-top:20px">
             <button class="btn btn-primary" ?disabled=${!this.dirty} @click=${() => this.saveSettings()}>
               Save Settings
             </button>
