@@ -23,6 +23,7 @@ export class ImportWizard extends LitElement {
 
     .steps {
       display: flex;
+      align-items: center;
       gap: 8px;
       margin-bottom: 32px;
     }
@@ -150,6 +151,7 @@ export class ImportWizard extends LitElement {
   @state() private selectedNode = 'local';
   @state() private importing = false;
   @state() private uploading = false;
+  @state() private uploadProgress = 0;
   @state() private uploadedPath = '';
   @state() private dragover = false;
 
@@ -185,23 +187,50 @@ export class ImportWizard extends LitElement {
     }
 
     this.uploading = true;
+    this.uploadProgress = 0;
+
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const res = await fetch('/api/import/upload', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
+      const result = await new Promise<{ path: string; name: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            this.uploadProgress = Math.round((e.loaded / e.total) * 100);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const json = JSON.parse(xhr.responseText);
+              resolve(json.data);
+            } catch { reject(new Error('Invalid response')); }
+          } else {
+            try {
+              const json = JSON.parse(xhr.responseText);
+              reject(new Error(json.message || `Upload failed (${xhr.status})`));
+            } catch { reject(new Error(`Upload failed (${xhr.status})`)); }
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error during upload')));
+        xhr.addEventListener('timeout', () => reject(new Error('Upload timed out')));
+
+        xhr.open('POST', '/api/import/upload');
+        xhr.withCredentials = true;
+        xhr.timeout = 600000; // 10 min
+        xhr.send(formData);
       });
-      if (!res.ok) throw new Error((await res.json()).message || 'Upload failed');
-      const json = await res.json();
-      this.uploadedPath = json.data.path;
+
+      this.uploadedPath = result.path;
       this.serverName = file.name.replace(/\.(zip|tar\.gz|tgz)$/i, '').replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       showToast('File uploaded and extracted', 'success');
       this.step = 2;
     } catch (err: any) {
-      showToast(err.message || 'Upload failed', 'error');
+      showToast(err.message || 'Upload failed', 'error', 10000);
     } finally {
       this.uploading = false;
     }
@@ -290,7 +319,13 @@ export class ImportWizard extends LitElement {
       ${this.method === 'upload' ? html`
         <div class="section">
           ${this.uploading ? html`
-            <div class="upload-progress">Uploading and extracting...</div>
+            <div class="upload-progress">
+              <div>${this.uploadProgress < 100 ? `Uploading... ${this.uploadProgress}%` : 'Extracting on server...'}</div>
+              <div style="margin-top:12px;height:6px;background:var(--bg-hover);border-radius:3px;overflow:hidden">
+                <div style="height:100%;background:var(--accent);border-radius:3px;transition:width 0.3s;width:${this.uploadProgress}%"></div>
+              </div>
+              <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">Large files may take a few minutes</div>
+            </div>
           ` : html`
             <div class="dropzone ${this.dragover ? 'dragover' : ''}"
               @drop=${this.handleDrop}

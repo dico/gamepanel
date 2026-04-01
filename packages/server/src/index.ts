@@ -49,6 +49,8 @@ async function main() {
   const app = Fastify({
     logger: config.isDev ? { level: 'info' } : { level: 'warn' },
     trustProxy: true,
+    bodyLimit: 2 * 1024 * 1024 * 1024, // 2GB
+    connectionTimeout: 0, // No timeout for uploads
   });
 
   // Register plugins
@@ -58,7 +60,7 @@ async function main() {
     credentials: true,
   });
   await app.register(fastifyWebsocket);
-  await app.register(fastifyMultipart, { limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
+  await app.register(fastifyMultipart, { limits: { fileSize: 2 * 1024 * 1024 * 1024 } }); // 2GB max
 
   // Serve static frontend (client build output or dev placeholder)
   // Try multiple possible paths for client dist
