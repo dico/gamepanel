@@ -1,0 +1,31 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install build tools for native modules (better-sqlite3, bcrypt)
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+# Install all dependencies
+COPY package.json ./
+COPY packages/shared/package.json packages/shared/
+COPY packages/server/package.json packages/server/
+COPY packages/client/package.json packages/client/
+RUN npm install
+
+# Build shared package
+COPY packages/shared/ packages/shared/
+COPY tsconfig.base.json ./
+RUN npm run build -w packages/shared
+
+# Build client
+COPY packages/client/ packages/client/
+RUN npm run build -w packages/client
+
+# Copy templates
+COPY templates/ templates/
+
+# Server source is mounted as volume for live reload
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev", "-w", "packages/server"]

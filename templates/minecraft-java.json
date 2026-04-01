@@ -1,0 +1,140 @@
+{
+  "slug": "minecraft-java",
+  "name": "Minecraft Java Edition",
+  "icon": "minecraft.svg",
+  "image": "minecraft-java.jpg",
+  "category": "survival",
+
+  "docker": {
+    "image": "itzg/minecraft-server:latest",
+    "stopSignal": "SIGTERM",
+    "stopTimeout": 30
+  },
+
+  "ports": [
+    {
+      "name": "Game",
+      "container": 25565,
+      "protocol": "tcp",
+      "defaultHost": 25565
+    }
+  ],
+
+  "volumes": [
+    {
+      "name": "Server Data",
+      "container": "/data"
+    }
+  ],
+
+  "console": {
+    "type": "stdin",
+    "charset": "utf-8"
+  },
+
+  "query": {
+    "type": "minecraft",
+    "port": 25565
+  },
+
+  "update": {
+    "type": "image+version",
+    "versionEnv": "VERSION",
+    "versionValues": {
+      "type": "dynamic",
+      "source": "https://launchermeta.mojang.com/mc/game/version_manifest.json",
+      "description": "Hentes fra Mojangs API"
+    },
+    "description": "Image-oppdatering og Minecraft-versjon er uavhengige"
+  },
+
+  "configGroups": [
+    { "id": "general", "label": "Generelt", "order": 1 },
+    { "id": "access", "label": "Tilgang og whitelist", "order": 2 },
+    { "id": "gameplay", "label": "Gameplay", "order": 3 },
+    { "id": "performance", "label": "Ytelse", "order": 4, "advanced": true }
+  ],
+
+  "environment": {
+    "fixed": { "EULA": "TRUE" },
+    "configurable": [
+      {
+        "key": "VERSION",
+        "label": "Minecraft Version",
+        "type": "string",
+        "default": "LATEST",
+        "group": "general"
+      },
+      {
+        "key": "MEMORY",
+        "label": "Memory",
+        "type": "string",
+        "default": "2G",
+        "group": "performance",
+        "description": "Java heap size, e.g. 1G, 2G, 4G"
+      }
+    ]
+  },
+
+  "configFiles": [
+    {
+      "name": "server.properties",
+      "path": "/data/server.properties",
+      "format": "properties",
+      "managedFields": [
+        {
+          "key": "motd",
+          "label": "Server Message (MOTD)",
+          "type": "string",
+          "default": "A Minecraft Server",
+          "group": "general"
+        },
+        {
+          "key": "gamemode",
+          "label": "Game Mode",
+          "type": "select",
+          "options": ["survival", "creative", "adventure", "spectator"],
+          "default": "survival",
+          "group": "gameplay"
+        },
+        {
+          "key": "difficulty",
+          "label": "Difficulty",
+          "type": "select",
+          "options": ["peaceful", "easy", "normal", "hard"],
+          "default": "normal",
+          "group": "gameplay"
+        },
+        {
+          "key": "pvp",
+          "label": "PvP",
+          "type": "boolean",
+          "default": true,
+          "group": "gameplay"
+        },
+        {
+          "key": "max-players",
+          "label": "Max Players",
+          "type": "number",
+          "default": 20,
+          "group": "general",
+          "validation": { "min": 1, "max": 100 }
+        },
+        {
+          "key": "white-list",
+          "label": "Enable Whitelist",
+          "type": "boolean",
+          "default": false,
+          "group": "access"
+        },
+        {
+          "key": "online-mode",
+          "label": "Online Mode (Mojang auth)",
+          "type": "boolean",
+          "default": true,
+          "group": "access"
+        }
+      ]
+    }
+  ]
+}

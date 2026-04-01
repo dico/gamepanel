@@ -1,0 +1,27 @@
+services:
+  gamepanel:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: gamepanel-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount server source for live reload (tsx watch)
+      - ./packages/server/src:/app/packages/server/src
+      # Mount templates for live editing
+      - ./templates:/app/templates
+      # Persist SQLite database and server data
+      - ./data:/app/data
+      # Mount Docker socket so GamePanel can manage containers
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - NODE_ENV=development
+      - GAMEPANEL_PORT=3000
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=changeme
+      - DATA_DIR=/app/data
+      - HOST_DATA_DIR=${HOST_DATA_DIR:-./data}
+      - TEMPLATES_DIR=/app/templates
+      - QUERY_HOST=${QUERY_HOST:-host.docker.internal}
+    restart: unless-stopped

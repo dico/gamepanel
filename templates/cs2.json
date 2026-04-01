@@ -1,0 +1,92 @@
+{
+  "slug": "cs2",
+  "name": "Counter-Strike 2",
+  "icon": "cs2.png",
+  "image": "cs2.jpg",
+  "category": "fps",
+
+  "docker": {
+    "image": "joedwards32/cs2:latest",
+    "stopSignal": "SIGTERM",
+    "stopTimeout": 15
+  },
+
+  "ports": [
+    {
+      "name": "Game",
+      "container": 27015,
+      "protocol": "udp",
+      "defaultHost": 27015
+    },
+    {
+      "name": "RCON",
+      "container": 27015,
+      "protocol": "tcp",
+      "defaultHost": 27015
+    }
+  ],
+
+  "volumes": [
+    {
+      "name": "Server Data",
+      "container": "/home/steam/cs2-dedicated"
+    }
+  ],
+
+  "console": {
+    "type": "stdin",
+    "charset": "utf-8"
+  },
+
+  "query": {
+    "type": "source",
+    "port": 27015
+  },
+
+  "update": {
+    "type": "auto",
+    "description": "Serveren oppdateres automatisk ved restart via SteamCMD"
+  },
+
+  "configGroups": [
+    { "id": "general", "label": "Generelt", "order": 1 },
+    { "id": "gameplay", "label": "Gameplay", "order": 2 }
+  ],
+
+  "environment": {
+    "fixed": {},
+    "configurable": [
+      {
+        "key": "CS2_SERVERNAME",
+        "label": "Server Name",
+        "type": "string",
+        "default": "GamePanel CS2",
+        "group": "general"
+      },
+      {
+        "key": "CS2_MAXPLAYERS",
+        "label": "Max Players",
+        "type": "number",
+        "default": 16,
+        "group": "general"
+      },
+      {
+        "key": "CS2_GAMETYPE",
+        "label": "Game Type",
+        "type": "select",
+        "options": ["0", "1", "2", "3"],
+        "default": "0",
+        "group": "gameplay"
+      },
+      {
+        "key": "CS2_RCONPW",
+        "label": "RCON Password",
+        "type": "password",
+        "default": "",
+        "group": "general"
+      }
+    ]
+  },
+
+  "configFiles": []
+}

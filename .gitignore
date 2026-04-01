@@ -1,0 +1,23 @@
+node_modules/
+dist/
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+*.log
+.DS_Store
+Thumbs.db
+
+# Work docs (credentials, dev notes — not for git)
+.work/
+
+# Claude Code settings
+.claude/
+
+# PSD source files
+*.psd
+
+# OS files
+Desktop.ini
+ehthumbs.db
