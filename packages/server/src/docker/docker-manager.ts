@@ -5,6 +5,7 @@ import { buildCreateOptions } from './container-builder.js';
 import { serverRepo } from '../db/repositories/server-repo.js';
 import { getTemplate } from '../templates/template-loader.js';
 import { eventBus } from '../services/event-bus.js';
+import { syncConfigToFiles } from '../services/config-writer.js';
 import { config } from '../config.js';
 import type { Server } from '@gamepanel/shared';
 
@@ -20,6 +21,9 @@ export const dockerManager = {
     if (!existsSync(serverDataDir)) {
       mkdirSync(serverDataDir, { recursive: true });
     }
+
+    // Sync managed config fields to files before starting
+    syncConfigToFiles(server);
 
     serverRepo.updateStatus(server.id, 'creating');
     eventBus.broadcastWs({ type: 'server:status', serverId: server.id, nodeId: server.nodeId, status: 'creating' });
@@ -56,6 +60,9 @@ export const dockerManager = {
 
   async start(server: Server): Promise<void> {
     if (!server.containerId) throw new Error('No container ID — server needs to be created first');
+
+    // Sync managed config fields to files before starting
+    syncConfigToFiles(server);
 
     const docker = getDocker(server.nodeId);
     const container = docker.getContainer(server.containerId);

@@ -5,6 +5,7 @@ import { GET } from '../services/api.js';
 import { onWsEvent } from '../services/ws.js';
 import { showToast } from './toast.js';
 import { copyText } from '../utils/clipboard.js';
+import './player-manager.js';
 
 interface PlayerRecord {
   id: number;
@@ -221,6 +222,8 @@ export class PlayerList extends LitElement {
             `)}
           </div>
         `}
+
+      <player-manager .serverId=${this.serverId}></player-manager>
     `;
   }
 }
