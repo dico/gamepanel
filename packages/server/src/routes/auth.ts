@@ -37,7 +37,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       sameSite: 'lax',
       path: '/',
       maxAge: config.sessionMaxAge / 1000,
-      secure: !config.isDev,
+      // Only require HTTPS if explicitly configured (most home setups use HTTP)
+      secure: false,
     });
 
     return { data: { id: user.id, username: user.username, role: user.role, displayName: user.displayName } };
