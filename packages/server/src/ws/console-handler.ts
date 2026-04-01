@@ -137,17 +137,39 @@ async function fetchHistory(serverId: string, containerId: string, nodeId: strin
   const docker = getDocker(nodeId);
   const container = docker.getContainer(containerId);
 
-  const logBuffer = await container.logs({
-    follow: false,
-    stdout: true,
-    stderr: true,
-    tail: MAX_BUFFER_SIZE,
-    timestamps: false,
-  });
+  try {
+    const logResult = await container.logs({
+      follow: false,
+      stdout: true,
+      stderr: true,
+      tail: MAX_BUFFER_SIZE,
+      timestamps: false,
+    });
 
-  const buf = typeof logBuffer === 'string' ? Buffer.from(logBuffer) : logBuffer as Buffer;
-  for (const line of demuxDockerStream(buf)) {
-    pushToBuffer(serverId, line);
+    // Docker may return a Buffer or a readable stream depending on TTY/network mode
+    if (Buffer.isBuffer(logResult)) {
+      for (const line of demuxDockerStream(logResult)) {
+        pushToBuffer(serverId, line);
+      }
+    } else if (typeof logResult === 'string') {
+      for (const line of demuxDockerStream(Buffer.from(logResult))) {
+        pushToBuffer(serverId, line);
+      }
+    } else {
+      // It's a stream — collect it
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        (logResult as NodeJS.ReadableStream).on('data', (chunk: Buffer) => chunks.push(chunk));
+        (logResult as NodeJS.ReadableStream).on('end', resolve);
+        (logResult as NodeJS.ReadableStream).on('error', reject);
+      });
+      const combined = Buffer.concat(chunks);
+      for (const line of demuxDockerStream(combined)) {
+        pushToBuffer(serverId, line);
+      }
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch log history for ${serverId}:`, err);
   }
 }
 
@@ -164,12 +186,13 @@ async function attachToContainer(
     follow: true,
     stdout: true,
     stderr: true,
-    tail: 0, // History is sent from buffer
+    tail: 0,
     timestamps: false,
-  });
+  }) as NodeJS.ReadableStream;
 
-  stream.on('data', (chunk: Buffer) => {
-    for (const line of demuxDockerStream(chunk)) {
+  stream.on('data', (chunk: Buffer | string) => {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    for (const line of demuxDockerStream(buf)) {
       pushToBuffer(serverId, line);
       broadcastToServer(serverId, { type: 'log', line });
     }
