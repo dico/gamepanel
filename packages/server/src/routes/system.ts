@@ -7,7 +7,7 @@ import { nodeRepo } from '../db/repositories/node-repo.js';
 import { serverRepo } from '../db/repositories/server-repo.js';
 import { settingsRepo } from '../db/repositories/settings-repo.js';
 import { getCachedServerStats, getCachedPlayerCounts } from '../services/status-monitor.js';
-import { VERSION } from '../config.js';
+import { VERSION, config } from '../config.js';
 import { metricsRepo } from '../db/repositories/metrics-repo.js';
 
 export async function systemRoutes(app: FastifyInstance): Promise<void> {
