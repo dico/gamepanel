@@ -6,6 +6,7 @@ import { getTemplate } from '../templates/template-loader.js';
 import { eventBus } from './event-bus.js';
 import { getCachedPlayerCounts } from './status-monitor.js';
 import { DEFAULT_PLAYER_QUERY_INTERVAL } from '@gamepanel/shared';
+import type { Server } from '@gamepanel/shared';
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -95,7 +96,53 @@ async function queryAll(): Promise<void> {
         }
       }
     } catch {
-      // Query failed — server might not be ready yet, skip silently
+      // Gamedig failed — try RCON fallback for Minecraft
+      try {
+        if (server.containerId && template.query.type === 'minecraft') {
+          await queryViaRcon(server);
+        }
+      } catch { /* skip */ }
     }
+  }
+}
+
+async function queryViaRcon(server: Server): Promise<void> {
+  const { getDocker } = await import('../docker/node-pool.js');
+  const docker = getDocker(server.nodeId);
+  const container = docker.getContainer(server.containerId!);
+
+  const exec = await container.exec({
+    Cmd: ['rcon-cli', 'list'],
+    AttachStdout: true,
+    AttachStderr: true,
+  });
+  const stream = await exec.start({ hijack: true, stdin: false });
+  const chunks: Buffer[] = [];
+  await new Promise<void>((resolve) => {
+    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+    stream.on('end', resolve);
+    setTimeout(resolve, 3000);
+  });
+
+  const output = Buffer.concat(chunks).toString('utf-8').trim();
+  // Parse "There are X of a max of Y players online: player1, player2"
+  const match = output.match(/There are (\d+) of a max of (\d+) players? online:?\s*(.*)?/i);
+  if (!match) return;
+
+  const online = parseInt(match[1], 10);
+  const max = parseInt(match[2], 10);
+  const playerNames = match[3]?.split(',').map(n => n.trim()).filter(n => n.length > 0) ?? [];
+
+  getCachedPlayerCounts().set(server.id, { online, max, players: playerNames });
+  eventBus.broadcastWs({
+    type: 'server:players',
+    serverId: server.id,
+    online,
+    max,
+    players: playerNames,
+  });
+
+  if (playerNames.length > 0) {
+    playerRepo.upsertMany(server.id, playerNames.map(name => ({ name })));
   }
 }

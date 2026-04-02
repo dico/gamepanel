@@ -236,6 +236,8 @@ export class DashboardPage extends LitElement {
                 ` : ''}
                 <span class="badge badge-${server.status}">${server.status}</span>
                 <div class="server-actions">
+                  ${server.status === 'creating'
+                    ? html`<span style="font-size:12px;color:var(--text-muted)">Setting up...</span>` : ''}
                   ${server.status === 'stopped' || server.status === 'error'
                     ? html`<button class="btn btn-sm" @click=${(e: Event) => this.handleAction(e, server.id, 'start')}>Start</button>` : ''}
                   ${server.status === 'running'

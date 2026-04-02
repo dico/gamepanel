@@ -117,6 +117,12 @@ export class PlayerList extends LitElement {
       font-weight: 600;
       color: var(--text-secondary);
     }
+
+    @media (max-width: 768px) {
+      .player-row { font-size: 12px; }
+      .player-uuid { display: none; }
+      .player-card-header { display: none !important; }
+    }
   `];
 
   @property() serverId = '';

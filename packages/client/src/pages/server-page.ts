@@ -98,6 +98,19 @@ export class ServerPage extends LitElement {
       z-index: 200;
       gap: 16px;
     }
+    .recreate-banner {
+      background: var(--warning-bg);
+      border: 1px solid var(--warning);
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--warning);
+    }
+
     .spinner {
       width: 40px;
       height: 40px;
@@ -138,11 +151,13 @@ export class ServerPage extends LitElement {
   @state() private showMoreMenu = false;
   @state() private renaming = false;
   @state() private actionInProgress = '';
+  @state() private needsRecreate = false;
   private cleanupWs?: () => void;
 
   connectedCallback() {
     super.connectedCallback();
     this.loadServer();
+    this.addEventListener('needs-recreate', () => { this.needsRecreate = true; });
     this.cleanupWs = onWsEvent((event) => {
       if (event.type === 'server:status' && event.serverId === this.serverId) {
         if (this.server && this.server.status !== 'creating') {
@@ -198,6 +213,8 @@ export class ServerPage extends LitElement {
       navigate('/');
       return;
     }
+    if (action === 'recreate') this.needsRecreate = false;
+
     const labels: Record<string, string> = {
       start: 'Starting server...',
       stop: 'Stopping server...',
@@ -258,6 +275,13 @@ export class ServerPage extends LitElement {
             `;
           })}
         </div>` : ''}
+
+      ${this.needsRecreate ? html`
+        <div class="recreate-banner">
+          <span>Configuration changed. Recreate the server for changes to take effect.</span>
+          <button class="btn btn-sm" @click=${() => this.handleAction('recreate')}>Recreate now</button>
+        </div>
+      ` : ''}
 
       <div class="actions">
         ${s.status === 'stopped' || s.status === 'error' ? html`<button class="btn btn-success" @click=${() => this.handleAction('start')}>Start</button>` : ''}

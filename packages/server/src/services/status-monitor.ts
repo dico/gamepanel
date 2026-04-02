@@ -96,10 +96,20 @@ async function syncAll(): Promise<void> {
       let actualStatus: ServerStatus;
       if (info.State.Running) {
         actualStatus = 'running';
+      } else if (info.State.Restarting) {
+        actualStatus = 'creating'; // Restarting = still setting up
       } else if (info.State.ExitCode !== 0 && info.State.ExitCode !== undefined) {
         actualStatus = 'error';
       } else {
         actualStatus = 'stopped';
+      }
+
+      // Don't override 'creating' status — server may be downloading/installing
+      if (server.status === 'creating' && actualStatus === 'error') {
+        // Container crashed during setup — check if it's restarting
+        if (info.RestartCount > 0) {
+          actualStatus = 'creating'; // Still trying
+        }
       }
 
       if (actualStatus !== server.status) {
