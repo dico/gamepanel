@@ -30,7 +30,8 @@ FROM node:20-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y python3 make g++ unzip && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y python3 make g++ unzip curl && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-27.5.1.tgz | tar xz --strip-components=1 -C /usr/local/bin docker/docker
 
 COPY package.json ./
 COPY packages/shared/package.json packages/shared/

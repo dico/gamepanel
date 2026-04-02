@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import { join } from 'path';
 
-export const VERSION = '0.1.0';
+export const VERSION = '0.2.1';
 
 dotenv.config();
 
