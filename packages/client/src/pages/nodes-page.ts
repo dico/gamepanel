@@ -89,6 +89,8 @@ export class NodesPage extends LitElement {
   @state() private nodes: GameNode[] = [];
   @state() private resources = new Map<string, NodeResources>();
   @state() private serverCounts = new Map<string, number>();
+  @state() private diskInfo: { used: number | null; total: number | null } | null = null;
+  @state() private serverDisk = new Map<string, number>();
   private cleanupWs?: () => void;
 
   connectedCallback() {
@@ -113,11 +115,16 @@ export class NodesPage extends LitElement {
   }
 
   private async loadData() {
-    const [nodesRes, serversRes] = await Promise.all([
+    const [nodesRes, serversRes, diskRes] = await Promise.all([
       GET<{ data: GameNode[] }>('/api/nodes'),
       GET<{ data: any[] }>('/api/servers'),
+      GET<{ data: { node: { used: number; total: number } | null; servers: Record<string, number> } }>('/api/system/disk'),
     ]);
     this.nodes = nodesRes.data;
+    this.diskInfo = diskRes.data.node;
+    const sd = new Map<string, number>();
+    for (const [id, size] of Object.entries(diskRes.data.servers)) sd.set(id, size);
+    this.serverDisk = sd;
 
     // Count servers per node
     const counts = new Map<string, number>();
@@ -180,16 +187,18 @@ export class NodesPage extends LitElement {
                         style="width:${(res.memoryUsed / res.memoryTotal * 100).toFixed(1)}%"></div>
                     </div>
                   </div>
-                  <div class="resource-item">
-                    <div class="resource-label">
-                      <span>Disk</span>
-                      <span>${this.formatBytes(res.diskUsed)} / ${this.formatBytes(res.diskTotal)}</span>
+                  ${this.diskInfo && this.diskInfo.total ? html`
+                    <div class="resource-item">
+                      <div class="resource-label">
+                        <span>Disk</span>
+                        <span>${this.formatBytes(this.diskInfo.used || 0)} / ${this.formatBytes(this.diskInfo.total)}</span>
+                      </div>
+                      <div class="bar-bg">
+                        <div class="bar-fill ${this.barClass((this.diskInfo.used || 0) / this.diskInfo.total * 100)}"
+                          style="width:${((this.diskInfo.used || 0) / this.diskInfo.total * 100).toFixed(1)}%"></div>
+                      </div>
                     </div>
-                    <div class="bar-bg">
-                      <div class="bar-fill ${this.barClass(res.diskUsed / res.diskTotal * 100)}"
-                        style="width:${(res.diskUsed / res.diskTotal * 100).toFixed(1)}%"></div>
-                    </div>
-                  </div>
+                  ` : ''}
                 </div>
               ` : html`<p style="color:var(--text-muted);font-size:13px">Resource data not available yet</p>`}
 

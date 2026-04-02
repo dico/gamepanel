@@ -8,6 +8,7 @@ import { serverRepo } from '../db/repositories/server-repo.js';
 import { settingsRepo } from '../db/repositories/settings-repo.js';
 import { getCachedServerStats, getCachedPlayerCounts } from '../services/status-monitor.js';
 import { VERSION } from '../config.js';
+import { metricsRepo } from '../db/repositories/metrics-repo.js';
 
 export async function systemRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', authMiddleware);
@@ -106,6 +107,40 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     } catch (err: any) {
       return reply.status(500).send({ error: 'UpdateError', message: err.message });
     }
+  });
+
+  // Metrics history
+  app.get<{
+    Querystring: { type?: string; targetId?: string; period?: string };
+  }>('/api/system/metrics', async (request) => {
+    const type = (request.query.type || 'node') as 'node' | 'server';
+    const targetId = request.query.targetId || 'local';
+    const period = request.query.period || '24h';
+    const history = metricsRepo.getHistory(type, targetId, period);
+    return { data: history };
+  });
+
+  // Disk usage summary
+  app.get('/api/system/disk', async () => {
+    const servers = serverRepo.findAll();
+    const serverDisk: Record<string, number> = {};
+
+    // Get latest disk metric per server
+    for (const server of servers) {
+      const latest = metricsRepo.getHistory('server', server.id, '1h', 1);
+      if (latest.length > 0 && latest[0].diskUsed) {
+        serverDisk[server.id] = latest[0].diskUsed;
+      }
+    }
+
+    // Get node disk
+    const nodeMetrics = metricsRepo.getHistory('node', 'local', '1h', 1);
+    const nodeDisk = nodeMetrics.length > 0 ? {
+      used: nodeMetrics[0].diskUsed,
+      total: nodeMetrics[0].diskTotal,
+    } : null;
+
+    return { data: { node: nodeDisk, servers: serverDisk } };
   });
 
   // Cached live stats — instant response, no waiting for next poll

@@ -30,6 +30,7 @@ import { consoleWsRoutes } from './ws/console-handler.js';
 import { eventsWsRoutes } from './ws/events-handler.js';
 import { startStatusMonitor } from './services/status-monitor.js';
 import { startPlayerQuery } from './services/player-query.js';
+import { startMetricsCollector } from './services/metrics-collector.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -128,6 +129,7 @@ async function main() {
   // Start background services
   startStatusMonitor();
   startPlayerQuery();
+  startMetricsCollector();
 
   // Start server
   await app.listen({ port: config.port, host: config.host });
