@@ -38,6 +38,11 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     let updateAvailable = false;
     let remoteDigest: string | null = null;
 
+    // Skip update check in development (local build, not from Docker Hub)
+    if (config.isDev) {
+      return { data: { current: VERSION, updateAvailable: false, updateCommand: 'cd /opt/gamepanel && docker compose pull && docker compose up -d' } };
+    }
+
     try {
       // Check Docker Hub for latest image digest
       // Compare with our running image to detect actual changes
