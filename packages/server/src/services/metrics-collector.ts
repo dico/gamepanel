@@ -51,11 +51,22 @@ async function collectAll(): Promise<void> {
         }
       } catch { /* skip if df not available */ }
 
-      const memTotal = info.MemTotal || 0;
-      // Docker info doesn't give CPU %, we get that from container stats
+      // Get real memory usage from /proc/meminfo or free command
+      let memTotal = info.MemTotal || 0;
+      let memUsed = 0;
+      try {
+        const freeOutput = execFileSync('free', ['-b'], { timeout: 5000 }).toString();
+        const memLine = freeOutput.split('\n').find(l => l.startsWith('Mem:'));
+        if (memLine) {
+          const parts = memLine.split(/\s+/);
+          memTotal = parseInt(parts[1], 10) || memTotal;
+          memUsed = parseInt(parts[2], 10) || 0;
+        }
+      } catch { /* fallback: can't determine */ }
+
       const nodeMetric = {
         cpuPercent: null,
-        memoryUsed: memTotal - (info.MemoryLimit || memTotal),
+        memoryUsed: memUsed,
         memoryTotal: memTotal,
         diskUsed,
         diskTotal,

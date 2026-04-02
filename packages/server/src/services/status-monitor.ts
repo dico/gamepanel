@@ -51,23 +51,42 @@ async function syncAll(): Promise<void> {
       // Broadcast node resources
       try {
         const info = await docker.info();
-        const resources = {
-          cpuPercent: 0, // Docker info doesn't give host CPU %, will come from container stats
-          memoryUsed: (info.MemTotal || 0) - (info.MemoryLimit || info.MemTotal || 0),
-          memoryTotal: info.MemTotal || 0,
-          diskUsed: 0,
-          diskTotal: 0,
-        };
 
-        // Get disk usage from df
+        // Get real memory from free command
+        let memTotal = info.MemTotal || 0;
+        let memUsed = 0;
         try {
-          const df = await docker.df();
-          const imageSize = df.Images?.reduce((s: number, i: any) => s + (i.Size || 0), 0) ?? 0;
-          const containerSize = df.Containers?.reduce((s: number, c: any) => s + (c.SizeRw || 0), 0) ?? 0;
-          const volumeSize = df.Volumes?.reduce((s: number, v: any) => s + (v.UsageData?.Size || 0), 0) ?? 0;
-          resources.diskUsed = imageSize + containerSize + volumeSize;
-          resources.diskTotal = resources.diskUsed * 3; // Rough estimate
+          const { execFileSync } = await import('child_process');
+          const freeOutput = execFileSync('free', ['-b'], { timeout: 5000 }).toString();
+          const memLine = freeOutput.split('\n').find((l: string) => l.startsWith('Mem:'));
+          if (memLine) {
+            const parts = memLine.split(/\s+/);
+            memTotal = parseInt(parts[1], 10) || memTotal;
+            memUsed = parseInt(parts[2], 10) || 0;
+          }
+        } catch { /* fallback */ }
+
+        // Get disk from df
+        let diskUsed = 0;
+        let diskTotal = 0;
+        try {
+          const { execFileSync } = await import('child_process');
+          const dfOutput = execFileSync('df', ['-B1', '/app/data'], { timeout: 5000 }).toString();
+          const lines = dfOutput.trim().split('\n');
+          if (lines.length >= 2) {
+            const parts = lines[1].split(/\s+/);
+            diskTotal = parseInt(parts[1], 10) || 0;
+            diskUsed = parseInt(parts[2], 10) || 0;
+          }
         } catch { /* skip */ }
+
+        const resources = {
+          cpuPercent: 0,
+          memoryUsed: memUsed,
+          memoryTotal: memTotal,
+          diskUsed,
+          diskTotal,
+        };
 
         eventBus.broadcastWs({
           type: 'node:resources',
