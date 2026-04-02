@@ -52,18 +52,16 @@ async function syncAll(): Promise<void> {
       try {
         const info = await docker.info();
 
-        // Get real memory from free command
+        // Get real memory from /proc/meminfo
         let memTotal = info.MemTotal || 0;
         let memUsed = 0;
         try {
-          const { execFileSync } = await import('child_process');
-          const freeOutput = execFileSync('free', ['-b'], { timeout: 5000 }).toString();
-          const memLine = freeOutput.split('\n').find((l: string) => l.startsWith('Mem:'));
-          if (memLine) {
-            const parts = memLine.split(/\s+/);
-            memTotal = parseInt(parts[1], 10) || memTotal;
-            memUsed = parseInt(parts[2], 10) || 0;
-          }
+          const { readFileSync } = await import('fs');
+          const meminfo = readFileSync('/proc/meminfo', 'utf-8');
+          const totalMatch = meminfo.match(/MemTotal:\s+(\d+)/);
+          const availMatch = meminfo.match(/MemAvailable:\s+(\d+)/);
+          if (totalMatch) memTotal = parseInt(totalMatch[1], 10) * 1024;
+          if (totalMatch && availMatch) memUsed = memTotal - parseInt(availMatch[1], 10) * 1024;
         } catch { /* fallback */ }
 
         // Get disk from df

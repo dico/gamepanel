@@ -1,5 +1,5 @@
 import { execFileSync } from 'child_process';
-import { statSync, readdirSync } from 'fs';
+import { statSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { metricsRepo } from '../db/repositories/metrics-repo.js';
 import { serverRepo } from '../db/repositories/server-repo.js';
@@ -51,18 +51,16 @@ async function collectAll(): Promise<void> {
         }
       } catch { /* skip if df not available */ }
 
-      // Get real memory usage from /proc/meminfo or free command
+      // Get real memory from /proc/meminfo (shows host values even inside container)
       let memTotal = info.MemTotal || 0;
       let memUsed = 0;
       try {
-        const freeOutput = execFileSync('free', ['-b'], { timeout: 5000 }).toString();
-        const memLine = freeOutput.split('\n').find(l => l.startsWith('Mem:'));
-        if (memLine) {
-          const parts = memLine.split(/\s+/);
-          memTotal = parseInt(parts[1], 10) || memTotal;
-          memUsed = parseInt(parts[2], 10) || 0;
-        }
-      } catch { /* fallback: can't determine */ }
+        const meminfo = readFileSync('/proc/meminfo', 'utf-8');
+        const totalMatch = meminfo.match(/MemTotal:\s+(\d+)/);
+        const availMatch = meminfo.match(/MemAvailable:\s+(\d+)/);
+        if (totalMatch) memTotal = parseInt(totalMatch[1], 10) * 1024;
+        if (totalMatch && availMatch) memUsed = memTotal - parseInt(availMatch[1], 10) * 1024;
+      } catch { /* fallback */ }
 
       const nodeMetric = {
         cpuPercent: null,
